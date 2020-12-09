@@ -39,7 +39,7 @@ Note: in order to implement NNDSVD initialization of factors, a fast randomized 
 - `120` is the number of features/columns in each task matrix, which has to be be the same across all tasks. This current version assume a symmetric matrix.
 - `2` = k, the smaller dimensions of U and V. 
 -	`-o output/` will put all output files to output/ directory. Check out the example output directory in the repo.
--	`-a 10` will set the alpha (strength of regularization to parent node) to be 10. Default is alpha = 1.
+-	`-a 10` will set the alpha (strength of regularization to parent node) to be 10. Default is alpha = 10.
 
 #### Input tree file format
 See example in input/toy_tree.txt.
