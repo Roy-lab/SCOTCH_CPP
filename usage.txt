@@ -1,8 +1,8 @@
 Usage:
-./run_tmi <tree file> <number of features> <k> <optional arguments>
+./run_tmf <tree file> <number of features> <k> <optional arguments>
 
 Example:
-./run_tmi input/toy_tree.txt 120 2 -o output/
+./run_tmf input/toy_tree.txt 120 2 -o output/
 
 Input tree file format:
 ======= example ========
@@ -17,7 +17,7 @@ Input tree file format:
 	you hit the root, which should be the last node ID.)
 - Column 3: node alias, used as prefix to U and V output files.
 - Column 4: location of input matrix file for leaf nodes, relative 
-	to where the run_tmi executable is. Set as N/A for non-leaf nodes.
+	to where the run_tmf executable is. Set as N/A for non-leaf nodes.
 - Column 5: number of samples/data points/rows in each input matrix; 
 	Set as N/A for non-leaf nodes.
 

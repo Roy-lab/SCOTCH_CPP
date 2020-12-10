@@ -12,9 +12,9 @@
 #include "io.h"
 #include "utils.h"
 #include "initialization.h"
-#include "tmi.h"
+#include "tmf.h"
 
-int TMI::fit() {
+int TMF::fit() {
 	double old_error = 0;
 	for(vector<Node*>::iterator node=tree.begin(); node!=tree.end(); ++node) {
 		old_error += (*node)->calculate_objective();		
@@ -47,7 +47,7 @@ int TMI::fit() {
 	return 0;
 }
 
-int TMI::make_tree(vector<int>& parentIds, vector<string>& aliases, vector<string>& inputFiles, vector<int>& n, int m) {
+int TMF::make_tree(vector<int>& parentIds, vector<string>& aliases, vector<string>& inputFiles, vector<int>& n, int m) {
 	int nTasks = inputFiles.size();
 	int nNodes = parentIds.size();
 
@@ -116,7 +116,7 @@ int TMI::make_tree(vector<int>& parentIds, vector<string>& aliases, vector<strin
 
  
 int 
-TMI::make_tree_asymm(vector<int>& parentIds, vector<string>& aliases, vector<string>& inputFiles, vector<int>& n, int m) {
+TMF::make_tree_asymm(vector<int>& parentIds, vector<string>& aliases, vector<string>& inputFiles, vector<int>& n, int m) {
 	int nTasks = inputFiles.size();
 	int nNodes = parentIds.size();
 
@@ -171,7 +171,7 @@ TMI::make_tree_asymm(vector<int>& parentIds, vector<string>& aliases, vector<str
 	return 0;
 } 
 
-int TMI::print_factors(string prefix) {
+int TMF::print_factors(string prefix) {
 	for (vector<Node*>::iterator itr=tree.begin(); itr!=tree.end(); ++itr) {
 		(*itr)->write_factors_to_file(prefix);
 	}

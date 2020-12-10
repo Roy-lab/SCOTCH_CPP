@@ -26,11 +26,11 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib
 ```
 4. And let's install! In the same directory you downloaded the code/Makefile (either by cloning the repository or by downloading a release), run:
 ```
-make run_tmi
+make run_tmf
 ```
-5. If all went well, you won't get any alarming messages, and you will see an executable named `run_tmi` created in the same directory. A quick test below will print the manual (UNDER CONSTRUCTION):
+5. If all went well, you won't get any alarming messages, and you will see an executable named `run_tmf` created in the same directory. A quick test below will print the manual (UNDER CONSTRUCTION):
 ```
-./run_tmi -h
+./run_tmf -h
 ```
 
 Note: in order to implement NNDSVD initialization of factors, a fast randomized SVD algorithm from [RSVDPACK](https://github.com/sergeyvoronin/LowRankMatrixDecompositionCodes) was used. A minor modification to allow random seed specification was made to the original code from [RSVDPACK](https://github.com/sergeyvoronin/LowRankMatrixDecompositionCodes/tree/master/single_core_gsl_code). This updated code is included under modules/random_svd directory. Compilation of this code is part of the included Makefile; no additional step is necessary for installation.
@@ -40,9 +40,9 @@ Note: in order to implement NNDSVD initialization of factors, a fast randomized 
 #### Basic usage
 See [Parameters](#parameters) for more details.
 ```
-./run_tmi input/toy_tree.txt 120 2 -o output/ -a 10 -l 200
+./run_tmf input/toy_tree.txt 120 2 -o output/ -a 10 -l 200
 ```
-- `input/toy_tree.txt` specifies the tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmi executable location). 
+- `input/toy_tree.txt` specifies the tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmf executable location). 
 - `120` is the number of features/columns in each task matrix, which has to be be the same across all tasks. 
 - `2` = k, the smaller dimensions of U and V. 
 -	[Optional] `-o output/` will put all output files to output/ directory. Check out the example output directory in the repo. By default output will be saved to current directory.
@@ -59,7 +59,7 @@ See example in input/toy_tree.txt.
 - Column 1: **node ID**; start from 1 and move up.
 - Column 2: **parent node ID**; right now the implementation will only work correctly if you ID all children nodes before a parent node (so start from the lowest depth of tree, move to next level, till you hit the root, which should be the last node ID.)
 - Column 3: **node alias**, used as prefix to U and V output files.
-- Column 4: **location of input matrix file for leaf nodes**, relative to where the `run_tmi` executable is. Set as N/A for non-leaf nodes.
+- Column 4: **location of input matrix file for leaf nodes**, relative to where the `run_tmf` executable is. Set as N/A for non-leaf nodes.
 - Column 5: **number of rows/data points in each input matrix**. Set as N/A for non-leaf nodes.
 
 #### Input matrix format
@@ -72,7 +72,7 @@ See example in input/toy_tree.txt.
 
 | Position | Parameter | Description | Default Value/Behavior | 
 | :---    | :---        | :--- | :--- |
-| 1     | input tree file      | The tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmi executable location). See above for tree file format | N/A | 
+| 1     | input tree file      | The tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmf executable location). See above for tree file format | N/A | 
 | 2     | number of features   | Number of features/columns in each task matrix, which has to be be the same across all tasks. | N/A | 
 | 3     | k     | The lower dimension of the factors (i.e. number of clusters) | N/A | 
 | optional | -o \<output_file_prefix\>    | Ouput file path. Note: will NOT create a directory if the specified directory does not exist. | Output files will save to current directory. | 

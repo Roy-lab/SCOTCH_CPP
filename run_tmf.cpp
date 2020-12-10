@@ -23,7 +23,7 @@
 #include "modules/initialization.h"
 #include "modules/root.h"
 #include "modules/branch.h"
-#include "modules/tmi.h"
+#include "modules/tmf.h"
 
 int main(int argc, char **argv)
 {
@@ -96,11 +96,11 @@ int main(int argc, char **argv)
 	vector<string> aliases, fileNames;
 	io::read_tree(treeFileName, parentIds, aliases, fileNames, nSamples);
 
-	TMI tmi = TMI(nComponents,maxIter,randomState,verbose,tol,alpha,lambda);
-	tmi.make_tree(parentIds, aliases, fileNames, nSamples, nFeatures);
-	//tmi.make_tree_asymm(parentIds, aliases, fileNames, nSamples, nFeatures);
-	tmi.fit();
-	tmi.print_factors(outputPrefix);
+	TMF tmf = TMF(nComponents,maxIter,randomState,verbose,tol,alpha,lambda);
+	tmf.make_tree(parentIds, aliases, fileNames, nSamples, nFeatures);
+	//tmf.make_tree_asymm(parentIds, aliases, fileNames, nSamples, nFeatures);
+	tmf.fit();
+	tmf.print_factors(outputPrefix);
 
 	struct timeval endTime;
 	gettimeofday(&endTime,NULL);

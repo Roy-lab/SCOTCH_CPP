@@ -2,13 +2,13 @@
 #include <list>
 #include <vector>
 #include "node.h"
-#ifndef _tmi_
-#define _tmi_
+#ifndef _tmf_
+#define _tmf_
 using namespace std;
 
-class TMI {
+class TMF {
 	public:
-		TMI(int k, int nitr, int seed, bool verb, double t, double a, double l) : 
+		TMF(int k, int nitr, int seed, bool verb, double t, double a, double l) : 
 				n_components(k),
 				max_iter(nitr),
 				random_state(seed),
@@ -17,7 +17,7 @@ class TMI {
 				alpha(a),
 				lambda(l) {};
 
-		~TMI() {
+		~TMF() {
 			for (vector<Node*>::iterator itr=tree.begin(); itr!=tree.end(); ++itr) {
 				gsl_matrix_free((*itr)->get_V());
 				if ((*itr)->is_leaf()) {
