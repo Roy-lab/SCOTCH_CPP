@@ -1,6 +1,13 @@
 ### Tree-guided multi-task matrix factorization in C++
 
-### [Step 1] Install 
+Quicklinks:
+- [Installation instruction]()
+- [Basic usage](#basic-usage)
+- [Input file formats](#input-tree-file-format)
+- [Parameters](#parameters)
+- [Program outputs](#output-files)
+
+### \[Step 1\] Install 
 
 Installation instructions below were tested in Linux Centos 7 distribution. [GSL (GNU Scientific Library) 2.6](https://www.gnu.org/software/gsl/doc/html/index.html) is used to handle matrix- and vector-related operations. For matrix inversion, one of the newer functions in GSL 2.6 is used, so the code may not run if you have an older GSL.
 
@@ -29,7 +36,7 @@ make run_tmi
 
 Note: in order to implement NNDSVD initialization of factors, a fast randomized SVD algorithm from [RSVDPACK](https://github.com/sergeyvoronin/LowRankMatrixDecompositionCodes) was used. A minor modification to allow random seed specification was made to the original code from [RSVDPACK](https://github.com/sergeyvoronin/LowRankMatrixDecompositionCodes/tree/master/single_core_gsl_code). This updated code is included under modules/random_svd directory. Compilation of this code is part of the included Makefile; no additional step is necessary for installation.
 
-### [Step 2] Run
+### \[Step 2\] Run
 
 #### Basic usage
 ```
@@ -68,13 +75,13 @@ See example in input/toy_tree.txt.
 | 1     | input tree file      | The tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmi executable location). See above for tree file format | N/A | 
 | 2     | number of features   | Number of features/columns in each task matrix, which has to be be the same across all tasks. | N/A | 
 | 3     | k     | The lower dimension of the factors (i.e. number of clusters) | N/A | 
-| optional | -o <output_file_prefix>    | Ouput file path. Note: will NOT create a directory if the specified directory does not exist. | Output files will save to current directory. | 
-| optional | -a <alpha>  | Strenth of tree regularization, higher value enfoces higher similarity to parent node. |  10 | 
-| optional | -l <lambda>  | Strength of the sparsity constraint. Larger value results in sparse leaf node factor V. | 0, i.e. no sparsity regularization. |  
+| optional | -o \<output_file_prefix\>    | Ouput file path. Note: will NOT create a directory if the specified directory does not exist. | Output files will save to current directory. | 
+| optional | -a \<alpha\>  | Strenth of tree regularization, higher value enfoces higher similarity to parent node. |  10 | 
+| optional | -l \<lambda\>  | Strength of the sparsity constraint. Larger value results in sparse leaf node factor V. | 0, i.e. no sparsity regularization. |  
 | optional | -s  | Run in slient mode, nothing printed to stdout. | Error, total run time, max memory usage printed to stdout. | 
-| optional | -r <random state> | Random state/seed used for rNNDSVD initialization. | 1010|
-| optional | -t <tol> | Determines convergence and the termination of iterations. If <tol> = 10, the algorithm will keep iterating until the absolute difference between the previous iteration's error and current iteration's error is less than 10.| 1 |
-| optional | -m <max iter> | If <max iter> = 200, the algorithm will terminate at 200 iterations if it has not coverged based on the tolerance (tol) parameter by then. | 300 |
+| optional | -r \<random_state\> | Random state/seed used for rNNDSVD initialization. | 1010|
+| optional | -t \<tol\> | Determines convergence and the termination of iterations. If <tol> = 10, the algorithm will keep iterating until the absolute difference between the previous iteration's error and current iteration's error is less than 10.| 1 |
+| optional | -m \<max_iter\> | If <max iter> = 200, the algorithm will terminate at 200 iterations if it has not coverged based on the tolerance (tol) parameter by then. | 300 |
 
 #### Output files:
 - `leaf`\_U.txt and `leaf`\_V.txt for each leaf node; `leaf` will bereplaced with the node's alias.
