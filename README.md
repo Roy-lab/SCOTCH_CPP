@@ -80,8 +80,8 @@ See example in input/toy_tree.txt.
 | optional | -l \<lambda\>  | Strength of the sparsity constraint. Larger value results in sparse leaf node factor V. | 0, i.e. no sparsity regularization. |  
 | optional | -s  | Run in slient mode, nothing printed to stdout. | Error, total run time, max memory usage printed to stdout. | 
 | optional | -r \<random_state\> | Random state/seed used for rNNDSVD initialization. | 1010|
-| optional | -t \<tol\> | Determines convergence and the termination of iterations. If <tol> = 10, the algorithm will keep iterating until the absolute difference between the previous iteration's error and current iteration's error is less than 10.| 1 |
-| optional | -m \<max_iter\> | If <max iter> = 200, the algorithm will terminate at 200 iterations if it has not coverged based on the tolerance (tol) parameter by then. | 300 |
+| optional | -t \<tol\> | Determines convergence and the termination of iterations. If \<tol\> = 10, the algorithm will keep iterating until the absolute difference between the previous iteration's error and current iteration's error is less than 10.| 1 |
+| optional | -m \<max_iter\> | If \<max_iter\> = 200, the algorithm will terminate at 200 iterations if it has not coverged based on the tolerance (tol) parameter by then. | 300 |
 
 #### Output files:
 - `leaf`\_U.txt and `leaf`\_V.txt for each leaf node; `leaf` will bereplaced with the node's alias.
