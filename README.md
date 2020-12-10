@@ -38,6 +38,7 @@ Note: in order to implement NNDSVD initialization of factors, a fast randomized 
 ### \[Step 2\] Run
 
 #### Basic usage
+See [Parameters](#parameters) for more details.
 ```
 ./run_tmi input/toy_tree.txt 120 2 -o output/ -a 10 -l 200
 ```
