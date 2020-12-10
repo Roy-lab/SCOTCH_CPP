@@ -55,6 +55,11 @@ See example in input/toy_tree.txt.
 - Column 4: **location of input matrix file for leaf nodes**, relative to where the run_tgif executable is. Set as N/A for non-leaf nodes.
 - Column 5: **number of samples/data points/rows in each input matrix**; should be the same as the number of features/columns for now. Set as N/A for non-leaf nodes.
 
+#### Input matrix format
+- Tab-delimited "dense" matrix text files.
+- Each column represents a feature (e.g. gene); each row represents a data point (e.g. cell).
+- All input matrix files listed in the tree file should have the same number of features/columns (they can have different number of rows or data points).
+
 #### Difference from TGIF
 - No graph regularization
 - Initialization via joint NMF
