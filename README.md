@@ -96,4 +96,4 @@ See example in input/toy_tree.txt.
 - [x] Update documentation
 - [ ] Upload derivation for sparisty regularization on task-specific Vs
 - [x] Test sparsity regularization
-- [ ] Try to reduce matrix copying after initialization via joint NMF (somehow force matrix views to stick around in the heap??)
+- [x] Try to reduce matrix copying after initialization via joint NMF (somehow force matrix views to stick around in the heap??)
