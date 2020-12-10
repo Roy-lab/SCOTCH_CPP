@@ -1,0 +1,313 @@
+\documentclass{article}
+\usepackage{enumerate}
+\usepackage{ulem}
+\usepackage[left=1in, right=1in, top=1in, bottom=1in,headsep=0pt]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{url}
+%\usepackage{booktabs}
+%\usepackage{longtable}
+\usepackage[english]{babel}
+%\renewcommand{\familydefault}{\sfdefault}
+\usepackage{subcaption}
+\usepackage{amsfonts}
+%\usepackage{qtree}
+\usepackage{color} %red, green, blue, yellow, cyan, magenta, black, white
+\definecolor{mygreen}{RGB}{28,172,0} % color values Red, Green, Blue
+\definecolor{mylilas}{RGB}{170,55,241}
+\usepackage{fontspec}
+\usepackage{titlesec}
+\usepackage[font=footnotesize,labelfont=bf,skip=-10pt]{caption}
+\usepackage[super,comma,compress]{natbib}
+\setlength{\bibsep}{1pt plus 10ex}
+
+%\setmainfont[Ligatures=TeX]{Arial}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\expandafter\def\expandafter\normalsize\expandafter{%
+    \normalsize
+    \setlength\abovedisplayskip{2pt}
+    \setlength\belowdisplayskip{2pt}
+    \setlength\abovedisplayshortskip{2pt}
+    \setlength\belowdisplayshortskip{2pt}
+}
+
+\titleformat{\section}{\normalfont\fontsize{12}{12}\bfseries}{}{}{}%{\MakeUppercase}
+\titleformat{\subsection}{\normalfont\bfseries}{12}{12}{}
+\titleformat{\subsubsection}[runin]{\normalfont\bfseries}{}{}{}
+\titlespacing*{\section}{0pt}{0ex}{0ex}
+\titlespacing*{\subsection}{0pt}{0ex}{0ex}
+\titlespacing*{\subsubsection}{0pt}{0ex}{5pt}
+
+\DeclareMathOperator{\Tr}{Tr}
+
+\begin{document}
+%\maketitle
+\begin{center}
+\textbf{\large{Deriving the Block Coordinate Descent Rules \\
+for Tree-Structured NMF with sparsity regularization}}
+\end{center}
+\smallskip
+\section*{Objective}
+Given $t \in \{1, \dots, T \}$ tasks, each with input matrix $X^{(t)} \in \mathbb{R}^{n_t \times m}$, related to each other in a task hierarchy/tree with a set of nodes $c \in \{ r \}  \cup \mathcal{B} \cup \mathcal{T}$ where $r$ is the root node, $\mathcal{B}$ a set of internal (or branch) nodes $b \in \mathcal{B}$, and $\mathcal{T}$ a set of the task-specific leaf nodes, the objective is:
+\begin{align}
+O &= 
+\sum_{t=1}^T \left[
+\left\Vert X^{(t)} - U^{(t)} V^{(t)\top} \right\Vert_\text{F}^2 
++  \lambda \sum_{i=1}^m \left\Vert V^{(t)} [i,:] \right\Vert_1
+\right]
++  \alpha \sum_c \left\Vert V^{(c)} - V^{Pa(c)} \right\Vert_\text{F}^2 
+\end{align} 
+
+where $U^{(t)} \in \mathbb{R}^{n_t \times k}_{\geq 0}$, $V^{(\cdot)} \in \mathbb{R}^{m \times k}_{\geq 0}$, $k \ll n,m$. $V^{(t)}[i,:]$ is the $i$ row of task-specific factor matrix $V^{(t)}$.
+
+\medskip
+The regularization term involving $\lambda$ tries to enforce sparsity in each row of task-specific $V^{(t)}$, ultimately so that only one latent dimension ``lights up" for each row of $V^{(t)}$. Higher $\lambda$ will enforce stricter sparsity.
+
+\medskip
+The regularization term involving $\alpha$ will: 
+\begin{enumerate}[a.]
+\item constrain a task-specific latent feature factor $V^{(t)}$ in a leaf node of the task hierarchy to be similar to $V^{\text{Pa}(t)}$ in its parent node; 
+\item constrain an internal node's latent feature factor $V^{(b)}$ to be similar to its direct child nodes' $V^{(c)}$ and and its parent node's $V^{Pa(b)}$; and 
+\item constrain the root node's latent feature factor $V^{(r)}$ to be similar to all of its direct child nodes' $V^{(c)}$s.
+\end{enumerate}
+
+\medskip
+\section*{Breaking down to task-level and column-level subproblems}
+
+The objective can be written as:
+\begin{align}
+O &= 
+\sum_{t=1}^T \left[
+\left\Vert X^{(t)} - \sum_k u^{(t)}_{k} v^{(t)\top}_{k} \right\Vert_\text{F}^2 
++\lambda \sum_{i=1}^m \sum_k \left\lvert V^{(t)}[i,k] \right\rvert
+\right]
++ \alpha \sum_c \sum_k \left\Vert v^{(c)}_{k} - v^{Pa(c)}_{k} \right\Vert_\text{2}^2  \\
+ &= 
+\sum_{t=1}^T \left[
+\left\Vert X^{(t)} - \sum_k u^{(t)}_{k} v^{(t)\top}_{k} \right\Vert_\text{F}^2 
++ \lambda \sum_k \sum_{i=1}^m  \left\lvert V^{(t)}[i,k] \right\rvert
+\right]
++ \alpha \sum_c \sum_k \left\Vert v^{(c)}_{k} - v^{Pa(c)}_{k} \right\Vert_\text{2}^2  \\
+ &= 
+\sum_{t=1}^T \left[
+\left\Vert X^{(t)} - \sum_k u^{(t)}_{k} v^{(t)\top}_{k} \right\Vert_\text{F}^2 
++ \lambda \sum_k \left\Vert v_k^{(t)} \right\Vert_1
+\right]
++ \alpha \sum_c \sum_k \left\Vert v^{(c)}_{k} - v^{Pa(c)}_{k} \right\Vert_\text{2}^2 \label{eqn:objective}
+\end{align}
+
+Where $u^{(t)}_{k} \in \mathbb{R}^{n_t}$ is the $k$th column vector of $U^{(t)}$ and  $v ^{(t)}_{k}  \in \mathbb{R}^m$ is the $k$th column vector of $V^{(t)}$. Now we `pull out' terms involving the $k$th column in all factors:
+\begin{align}
+O &= \sum_{t=1}^T \left[
+\left\Vert 
+X^{(t)} 
+- u^{(t)}_{k} v^{(t)\top}_{k}
+- \sum_{j\neq k} u^{(t)}_{j} v^{(t)\top}_{j} 
+\right\Vert_\text{F}^2 
++\lambda \left\Vert v_k^{(t)} \right\Vert_1
++ \lambda \sum_{j \neq k} \left\Vert v_j^{(t)} \right\Vert_1 \right] \\
+&\quad\quad+
+\alpha \sum_c \left(
+\left\Vert v^{(c)}_{k} - u^{Pa(c)}_{k} \right\Vert_\text{2}^2 
++ \sum_{j\neq k} \left\Vert v^{(c)}_{j} - v^{Pa(c)}_{j}  \right\Vert_\text{2}^2  
+\right)
+\end{align} 
+
+Now we'll substitute with $R^{(t)}_k = X^{(t)} - \sum_{j\neq k} u^{(t)}_{j} v^{(t)\top}_{j}$:
+\begin{align}
+O &= \sum_{t=1}^T \left[
+\left\Vert 
+R_k^{(t)} 
+- u^{(t)}_{k} v^{(t)\top}_{k}
+\right\Vert_\text{F}^2 
++\lambda \left\Vert v_k^{(t)} \right\Vert_1
++ \lambda \sum_{j \neq k} \left\Vert v_j^{(t)} \right\Vert_1 \right] \\
+&\quad\quad+
+\alpha \sum_c \left\Vert v^{(c)}_{k} - u^{Pa(c)}_{k} \right\Vert_\text{2}^2 
++ \alpha \sum_c \sum_{j\neq k} \left\Vert v^{(c)}_{j} - v^{Pa(c)}_{j}  \right\Vert_\text{2}^2  
+\end{align} 
+
+We can now attempt to optimize $u^{(t)}_{k}$ and $v^{(\cdot)}_{k}$, fixing all other parameters to be constant. 
+
+\medskip
+\section*{Optimize $v^{(t)}_{k}$}
+To find $v^{(t)}_{k}$ for each leaf node task $t$ that minimizes the objective, we find the derivative of the objective with respect to $v^{(t)}_{k}$ and set it to 0, then solve. First we expand the objective into matrix multiplications:
+\begin{align}
+O &= 
+\left\Vert R^{(t)}_k - u^{(t)}_{k} v^{(t)\top}_{k}\right\Vert_\text{F}^2
++\lambda \left\Vert v_k^{(t)} \right\Vert_1 
++\alpha \left\Vert v^{(t)}_{k} - v^{Pa(t)}_{k} \right\Vert_\text{2}^2 
++ C \\
+&=
+\Tr \left[
+\left( R^{(t)}_k - u^{(t)}_{k} v^{(t)\top}_{k} \right)^\top \left( R^{(t)}_k - u^{(t)}_{k} v^{(t)\top}_{k} \right) \right]
++\lambda \left\Vert v_k^{(t)} \right\Vert_1 \\
+&\quad\quad+\alpha  \left( v^{(t)}_{k} - v^{Pa(t)}_{k} \right)^\top \left( v^{(t)}_{k} - v^{Pa(t)}_{k} \right)
++ C
+\end{align}
+
+Here $C$ subsumes all elements of the objective that does not involve $v^{(t)}_{k}$ (including terms involving tasks other than $t$), since they will be zeroed out when the derivative is taken with respect to $v^{(t)}_{k}$. Now we keep expanding:
+\begin{align}
+O &= 
+\Tr \left[
+R^{(t)^\top}_k R^{(t)}_k 
+- 2R^{(t)\top}_k u^{(t)}_{k} v^{(t)\top}_{k} 
++ \left( 
+u^{(t)}_{k} v^{(t)\top}_{k} \right)^\top \left( u^{(t)}_{k} v^{(t)\top}_{k} 
+\right) 
+\right] \\
+&\quad\quad 
++\lambda \left\Vert v_k^{(t)} \right\Vert_1
++ \alpha 
+\left( v^{(t)\top}_{k} v^{(t)}_{k} - 2 v^{(t)\top}_{k} v^{Pa(t)}_{k} + v^{Pa(t)\top}_{k} v^{Pa(t)}_{k} \right)
++ C \\
+&= \Tr \left( R^{(t)^\top}_k R^{(t)}_k \right)
+- 2 \Tr \left( R^{(t)\top}_ku^{(t)}_{k} v^{(t)\top}_{k} \right)
++  \Tr \left( v^{(t)}_{k}  u^{(t)\top}_{k}   u^{(t)}_{k} v^{(t)\top}_{k} \right)
+\\
+&\quad\quad
++\lambda \left\Vert v_k^{(t)} \right\Vert_1
++ \alpha v^{(t)\top}_{k} v^{(t)}_{k} - 2 \alpha v^{(t)\top}_{k}v^{Pa(t)}_{k} + \alpha v^{Pa(t)\top}_{k} v^{Pa(t)}_{k}
++ C \\
+&= \Tr \left( R^{(t)^\top}_k R^{(t)}_k \right)
+- 2 \left( R^{(t)\top}_ku^{(t)}_{k}  \right)^\top v^{(t)}_{k} 
++  \left( u^{(t)\top}_{k}   u^{(t)}_{k} \right)\left( v^{(t)\top}_{k} v^{(t)}_{k}  \right) 
+ \label{eqn:leafv1} \\
+&\quad\quad
++ \lambda \boldsymbol{1}_m^\top  v_k^{(t)}
++ \alpha v^{(t)\top}_{k} v^{(t)}_{k} - 2 \alpha v^{(t)\top}_{k}v^{Pa(t)}_{k} 
++ \alpha v^{Pa(t)\top}_{k} v^{Pa(t)}_{k}
++ C \label{eqn:leafv2}
+\end{align}
+
+where $\boldsymbol{1}_m$ is a vector of size $m$, filled with 1's. What allows us to expand $ \left\Vert v_k^{(t)} \right\Vert_1$ from (\ref{eqn:leafv1}) to $\boldsymbol{1}_m^\top  v_k^{(t)}$ (\ref{eqn:leafv2}) is the fact that we're enforcing $ v_k^{(t)}$ to be non-negative at initialization and at each iteration.
+\medskip
+
+Now the fun part:
+\begin{align}
+\frac{\partial O}{\partial v^{(t)}_{k}} &=
+0 - 2R^{(t)\top}_ku^{(t)}_{k} + 2  v^{(t)}_{k} u^{(t)\top}_{k} u^{(t)}_{k}
++ \lambda \boldsymbol{1}_m
++ 2 \alpha v^{(t)}_{k}
+- 2 \alpha v^{Pa(t)}_{k} + 0 + 0 \\
+0 &= -R^{(t)\top}_ku^{(t)}_{k} 
++ \left(u^{(t)\top}_{k} u^{(t)}_{k} + \alpha  \right) v^{(t)}_{k}
++ \frac{\lambda}{2} \boldsymbol{1}_m
+- \alpha v^{Pa(t)}_{k} \\
+v^{(t)}_{k}&= \frac{R^{(t)\top}_ku^{(t)}_{k} + \alpha v^{Pa(t)}_{k}-\frac{\lambda}{2} \boldsymbol{1}_m}{\left\Vert u^{(t)}_{k} \right\Vert_2^2 + \alpha}
+\end{align}
+
+With the non-negativity constraint $v^{(t)}_{k} \geq 0$, we want $R^{(t)\top}_ku^{(t)}_{k} + \alpha v^{Pa(t)}_{k} - \frac{\lambda}{2} \boldsymbol{1}_m\geq 0$, because if $R^{(t)\top}_ku^{(t)}_{k} + \alpha v^{Pa(t)}_{k} - \frac{\lambda}{2} \boldsymbol{1}_m < 0$, $O$ will increase in (\ref{eqn:leafv1}) and (\ref{eqn:leafv2}). So the finalized update rule is:
+\begin{align}
+v^{(t)}_{k}&= \frac{\left[ R^{(t)\top}_ku^{(t)}_{k} + \alpha v^{Pa(t)}_{k}  - \frac{\lambda}{2} \boldsymbol{1}_m\right]_+ }
+{\left\Vert u^{(t)}_{k} \right\Vert_2^2 + \alpha }
+\end{align}
+
+\section*{Optimize $u^{(t)}_{k}$}
+We can derive the update rule for $u^{(t)}_{k}$ in leaf node task $t$ similarly but much more simply.  From (\ref{eqn:leafv2}), we take the derivative of $O_t$ with respect to $u^{(t)}_{k}$; all regularization terms will zero out since they do not involve $u^{(t)}_{k}$. Hence the final update rule for $u^{(t)}_{k}$ is:
+\begin{align}
+u^{(t)}_{k}&= \frac{\left[ R^{(t)}_kv^{(t)}_{k} \right]_+ }{\left\Vert v^{(t)}_{k} \right\Vert_2^2 }
+\end{align}
+
+\section*{Optimize $v^{(r)}_{k}$}
+
+For the overall consensus factor in the root of the task hierarchy, $v^{(r)}_{k}$, we can again ignore terms that do not involve $v^{(r)}_{k}$ in the objective (\ref{eqn:objective}). Note that we're going to collect the terms involving nodes $c$ whose parent is the root node, i.e. $\text{Pa}(c) = r$:
+\begin{align}
+O &= \alpha \sum_{c \in \text{Child}(r)} 
+\left\Vert v^{(c)}_{k} - v^{(r)}_{k}\right\Vert_\text{2}^2 + C\\
+&= \alpha  \sum_{c \in \text{Child}(r)}
+\left(
+v^{(c)}_{k} - v^{(r)}_{k}
+\right)^\top 
+\left(
+v^{(c)}_{k} - v^{(r)}_{k}
+\right)
++ C\\
+&= \alpha
+\sum_{c \in \text{Child}(r)} \left[ 
+v^{(c)\top}_{k} v^{(c)}_{k} - 2 v^{(c)\top}_{k}v^{(r)}_{k} + v^{(r)\top}_{k} v^{(r)}_{k} \right] + C\\
+&= 
+C
+- \sum_{c \in \text{Child}(r)} 2 \alpha  v^{(c)\top}_{k} v^{(r)}_{k} 
++ \sum_{c \in \text{Child}(r)} \alpha  v^{(r)\top}_{k} v^{(r)}_{k}
+\end{align}
+
+Now we take the derivative, set to $0$, and solve:
+\begin{align}
+\frac{\partial O}{\partial v^{(r)}_{k}} 
+&=0 
+- \sum_{c \in \text{Child}(r)} 2 \alpha  v^{(c)}_{k}  
++ \sum_{c \in \text{Child}(r)} 2  \alpha  v^{(r)}_{k}  \\
+0 &=  - \sum_{c \in \text{Child}(r)} v^{(c)}_{k} 
+ + | \text{Child}(r) | \cdot v^{(r)}_{k} \\
+v^{(r)}_{k} & = \frac{\sum_{c \in \text{Child}(r)} v^{(c)}_{k}}{| \text{Child}(r) | }
+\end{align}
+
+where $| \text{Child}(r) | $ is the number of direct child nodes of the root node $r$.
+\medskip
+
+\section*{Optimize $v^{(b)}_{k}$}
+
+For the latent feature factor in an internal/branch node of the task hierarchy, $v^{(b)}_{k}$, same drill as before: we ignore terms that do not involve $v^{(b)}_{k}$ for the particular node $b$ of interest in the objective (\ref{eqn:objective}). This time we collect terms involving the parent node of $b$, i.e. $\text{Pa}(b)$, and nodes $c$ whose parent is $b$, i.e. $\text{Pa}(c) = b$:
+\begin{align}
+O &=\alpha 
+\left(
+\left\Vert v^{(b)}_{k} - v^{Pa(b)}_{k} \right\Vert_\text{2}^2 
++ \sum_{c \in \text{Child}(b)} \left\Vert v^{(c)}_{k} - v^{(b)}_{k} \right\Vert_\text{2}^2 
+\right) + C\\
+&=
+\alpha 
+\left(
+v^{(b)}_{k} - v^{Pa(b)}_{k}
+\right)^\top 
+\left(
+v^{(B)}_{k} - v^{Pa(b)}_{k}
+\right)
++ \alpha  \sum_{c \in \text{Child}(b)}
+\left(
+v^{(c)}_{k} - v^{(b)}_{k}
+\right)^\top 
+\left(
+v^{(c)}_{k} - v^{(b)}_{k}
+\right)
++ C\\
+&= 
+\alpha \left[
+v^{(b)\top}_{k} v^{(b)}_{k} - 2 v^{(b)\top}_{k}v^{\text{Pa}(b)}_{k} + v^{\text{Pa}(b)\top}_{k} v^{\text{Pa}(b)}_{k}
+\right] \nonumber \\
+&\quad\quad\quad + \alpha
+\sum_{c \in \text{Child}(b)} \left[ 
+v^{(c)\top}_{k} v^{(c)}_{k} - 2 v^{(c)\top}_{k}v^{(b)}_{k} + v^{(b)\top}_{k} v^{(b)}_{k} \right] + C\\
+&= 
+\alpha v^{(b)\top}_{k} v^{(b)}_{k}
+- 2\alpha v^{(b)\top}_{k}v^{\text{Pa}(b)}_{k}
+-  \sum_{c \in \text{Child}(b)} 2\alpha  v^{(c)\top}_{k} v^{(b)}_{k}
++ \sum_{c \in \text{Child}(b)} \alpha v^{(b)\top}_{k} v^{(b)}_{k}
+ +C
+\end{align}
+
+Now we take the derivative, set to $0$, and solve:
+\begin{align}
+\frac{\partial O}{\partial v^{(b)}_{k}} 
+&=
+2\alpha v^{(b)}_{k}
+- 2\alpha v^{\text{Pa}(b)}_{k}
+- \sum_{c \in \text{Child}(b)} 2 \alpha v^{(c)}_{k} 
++ \sum_{c \in \text{Child}(b)} 2 \alpha  v^{(b)}_{k}   \\
+0 &=  
+v^{(b)}_{k} - v^{\text{Pa}(b)}_{k} 
+- \sum_{c \in \text{Child}(b)} v^{(c)}_{k} 
+-  | \text{Child}(b) | \cdot v^{(b)}_{k} \\
+&= (1 + | \text{Child}(b) | ) v^{(b)}_{k} - v^{\text{Pa}(b)}_{k} 
+- \sum_{c \in \text{Child}(b)} v^{(c)}_{k}  \\
+v^{(b)}_{k} & = \frac{v^{\text{Pa}(b)}_{k} + \sum_{c \in \text{Child}(b)} v^{(c)}_{k} }{1 + | \text{Child}(b) | }
+\end{align}
+
+where $| \text{Child}(b) | $ is the number of direct child nodes of $b$.
+
+\end{document}

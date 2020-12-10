@@ -1,0 +1,158 @@
+\documentclass{article}
+\usepackage{enumerate}
+\usepackage{ulem}
+\usepackage[left=1in, right=1in, top=1in, bottom=1in,headsep=0pt]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{mathtools}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{url}
+%\usepackage{booktabs}
+%\usepackage{longtable}
+\usepackage[english]{babel}
+%\renewcommand{\familydefault}{\sfdefault}
+\usepackage{subcaption}
+\usepackage{amsfonts}
+%\usepackage{qtree}
+\usepackage{color} %red, green, blue, yellow, cyan, magenta, black, white
+\definecolor{mygreen}{RGB}{28,172,0} % color values Red, Green, Blue
+\definecolor{mylilas}{RGB}{170,55,241}
+\usepackage{fontspec}
+\usepackage{titlesec}
+\usepackage[font=footnotesize,labelfont=bf,skip=-10pt]{caption}
+\usepackage[super,comma,compress]{natbib}
+\setlength{\bibsep}{1pt plus 10ex}
+
+%\setmainfont[Ligatures=TeX]{Arial}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\expandafter\def\expandafter\normalsize\expandafter{%
+    \normalsize
+    \setlength\abovedisplayskip{2pt}
+    \setlength\belowdisplayskip{2pt}
+    \setlength\abovedisplayshortskip{2pt}
+    \setlength\belowdisplayshortskip{2pt}
+}
+
+\titleformat{\section}{\normalfont\fontsize{12}{12}\bfseries}{}{}{}%{\MakeUppercase}
+\titleformat{\subsection}{\normalfont\bfseries}{12}{12}{}
+\titleformat{\subsubsection}[runin]{\normalfont\bfseries}{}{}{}
+\titlespacing*{\section}{0pt}{0ex}{0ex}
+\titlespacing*{\subsection}{0pt}{0ex}{0ex}
+\titlespacing*{\subsubsection}{0pt}{0ex}{5pt}
+
+\DeclareMathOperator{\Tr}{Tr}
+
+\begin{document}
+%\maketitle
+\begin{center}
+\textbf{\large{Deriving the Block Coordinate Descent Rules for\\(single-task) NMF with Frobenius-norm regularization}}
+\end{center}
+\smallskip
+\section*{Objective}
+Given an input matrix $X \in \mathbb{R}_{\geq 0}^{n \times m}$ and $k \ll n,m$, the objective is to find $U \in \mathbb{R}_{\geq 0}^{n \times k}$, $V \in \mathbb{R}_{\geq 0}^{m \times k}$ that minimizes:
+\begin{align}
+O &= 
+\left\Vert X - U V^\top \right\Vert_\text{F}^2 
++  \lambda \left\Vert V \right\Vert_\text{F}^2
+\end{align} 
+
+The regularization term involving $\lambda$ tries to shrink the values in $V$. Higher $\lambda$ will lead to more ``shrinkage".
+
+\medskip
+\section*{Breaking down to task-level and column-level subproblems}
+
+The objective is equivalent to minimizing:
+\begin{align}
+O = 
+\left\Vert X - \sum_{j=1}^k u_{j} v^{\top}_{j} \right\Vert_\text{F}^2 
++ \lambda \left\Vert V \right\Vert_\text{F}^2 
+&= 
+\left\Vert X - \sum_{j=1}^k u_{j} v^{\top}_{j} \right\Vert_\text{F}^2 
++ \lambda \Tr \left( V^\top V \right) \\
+&= 
+\left\Vert X - \sum_{j=1}^k u_{j} v^{\top}_{j} \right\Vert_\text{F}^2 
++ \lambda \sum_{j=1}^k v_j^\top v_j
+\end{align}
+
+where $u_{j} \in \mathbb{R}^{n}_{\geq 0}$ is the $j$th column vector of $U$, i.e. $U[:,j]$, and  $v_{j}  \in \mathbb{R}^m_{\geq 0}$ is the $j$th column vector of $V$, i.e. $V [:,j]$. Now we `pull out' terms involving the $j$th column:
+\begin{align}
+O &= 
+\left\Vert X -u_{j} v^{\top}_{j} - \sum_{l \neq j} u_{l} v^{\top}_{l} \right\Vert_\text{F}^2 
++\lambda v_j^\top v_j
++\lambda \sum_{l\neq j} v_l^\top v_l
+\end{align}
+
+Now we'll substitute with $R_j = X - \sum_{l\neq j} u_{l} v^{\top}_{l}$:
+\begin{align}
+O &= 
+\left\Vert R -u_{j} v^{\top}_{j}  \right\Vert_\text{F}^2 
++\lambda v_j^\top v_j
++\lambda \sum_{l\neq j} v_l^\top v_l
+\end{align}
+
+We can now attempt to optimize $u_{j}$ and $v_{j}$, fixing all other parameters to be constant. 
+
+\medskip
+\section*{Optimize $v_{j}$}
+To find $v_{j}$ that minimizes the objective, we find the derivative of the objective with respect to $v_{j}$ and set it to 0, then solve. First we expand the objective into matrix multiplications:
+\begin{align}
+O &= 
+\left\Vert R_j -u_{j} v^{\top}_{j}  \right\Vert_\text{F}^2 
++\lambda v^\top_j v_j
++ C =
+\Tr \left[
+\left( R_j -u_{j} v^{\top}_{j} \right)^\top \left( R_j -u_{j} v^{\top}_{j} \right) \right]
++\lambda v^\top_j v_j
++ C
+\end{align}
+
+Here $C$ subsumes all elements of the objective that does not involve $v_j$, since they will be zeroed out when the derivative is taken with respect to $v_j$. Now we keep expanding:
+\begin{align}
+O &= 
+\Tr \left[
+R_j^\top R_j 
+- 2R_j ^\top  u_j v_j^\top
++ \left( u_j v_j^\top \right)^\top \left( u_j v_j^\top \right) 
+\right] 
++\lambda v^\top_j v_j
++ C \\
+&= \Tr \left( R^\top_j R_j \right)
+- 2 \Tr \left( R^\top_j u_{j} v^\top_{j} \right)
++  \Tr \left( v_{j}  u^{\top}_{j}   u_{j} v^{\top}_{j} \right)
++\lambda v^\top_j v_j
++ C \\
+&= \Tr \left( R^{^\top}_j R_j \right)
+- 2 \left( R^{\top}_j u_{j}  \right)^\top v_{j} 
++  \left( u^{\top}_{j}   u_{j} \right)\left( v^{\top}_{j} v_{j}  \right) 
++\lambda v^\top_j v_j
++ C \label{expanded} 
+\end{align}
+
+Now the fun part:
+\begin{align}
+\frac{\partial O}{\partial v_j} = 0 &=
+0 - 2R^{\top}_j u_{j} + 2  v_{j} u^{\top}_{j} u_{j}
++ 2\lambda v_j
++ 0 \\
+&= -R^{\top}_j u_{j} 
++ u^{\top}_{j} u_{j}  v_{j}
++ \lambda v_j
+\\
+v_{j} &= \frac{R^{\top}_j u_{j}}{\left\Vert u_{j} \right\Vert_2^2 + \lambda}
+\end{align}
+
+With the non-negativity constraint $v_{j} \geq 0$, we want $R^{\top}_j u_{j}  \geq 0$, because if $R^{\top}_j u_{j} < 0$, $O$ will increase in (\ref{expanded}). So the finalized update rule is:
+\begin{align}
+v_{j} &=\frac{ \left[ R^{\top}_j u_{j} \right]_+}{ \left\Vert u_{j} \right\Vert_2^2 + \lambda}
+\end{align}
+
+\section*{Optimize $u_{j}$}
+We can derive the update rule for $u_{j}$ more simply.  From (\ref{expanded}), we take the derivative of $O$ with respect to $u_j$; all regularization terms will zero out since they do not involve $u_j$. Hence the final update rule for $u_j$ is:
+\begin{align}
+u_j&= \frac{\left[ R_j v_j \right]_+ }{\left\Vert v_j \right\Vert_2^2 }
+\end{align}
+
+\end{document}
