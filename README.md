@@ -36,7 +36,7 @@ Note: in order to implement NNDSVD initialization of factors, a fast randomized 
 ./run_tmi input/toy_tree.txt 120 2 -o output/ -a 10 -l 200
 ```
 - `input/toy_tree.txt` specifies the tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmi executable location). 
-- `120` is the number of features/columns in each task matrix, which has to be be the same across all tasks. This current version assume a symmetric matrix.
+- `120` is the number of features/columns in each task matrix, which has to be be the same across all tasks. 
 - `2` = k, the smaller dimensions of U and V. 
 -	[Optional] `-o output/` will put all output files to output/ directory. Check out the example output directory in the repo. By default output will be saved to current directory.
 -	[Optional] `-a 10` will set the alpha (strength of regularization to parent node) to be 10. Default is alpha = 10.
@@ -60,11 +60,32 @@ See example in input/toy_tree.txt.
 - Each column represents a feature (e.g. gene); each row represents a data point (e.g. cell).
 - All input matrix files listed in the tree file should have the same number of features/columns (they can have different number of rows or data points).
 
+#### Parameters
+
+
+| Position | Parameter | Description | Default Value/Behavior | 
+| :---    | :---        | :--- | :--- |
+| 1     | input tree file      | The tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmi executable location). See above for tree file format | N/A | 
+| 2     | number of features   | Number of features/columns in each task matrix, which has to be be the same across all tasks. | N/A | 
+| 3     | k     | The lower dimension of the factors (i.e. number of clusters) | N/A | 
+| optional | -o <output_file_prefix>    | Ouput file path. Note: will NOT create a directory if the specified directory does not exist. | Output files will save to current directory. | 
+| optional | -a <alpha>  | Strenth of tree regularization, higher value enfoces higher similarity to parent node. |  10 | 
+| optional | -l <lambda>  | Strength of the sparsity constraint. Larger value results in sparse leaf node factor V. | 0, i.e. no sparsity regularization. |  
+| optional | -s  | Run in slient mode, nothing printed to stdout. | Error, total run time, max memory usage printed to stdout. | 
+| optional | -r <random state> | Random state/seed used for rNNDSVD initialization. | 1010|
+| optional | -t <tol> | Determines convergence and the termination of iterations. If <tol> = 10, the algorithm will keep iterating until the absolute difference between the previous iteration's error and current iteration's error is less than 10.| 1 |
+| optional | -m <max iter> | If <max iter> = 200, the algorithm will terminate at 200 iterations if it has not coverged based on the tolerance (tol) parameter by then. | 300 |
+
+#### Output files:
+- `leaf`\_U.txt and `leaf`\_V.txt for each leaf node; `leaf` will bereplaced with the node's alias.
+- `node`\_V.txt for each internal node and the root node; `node` will be replaced with the node's alias.
+
 #### Difference from TGIF
 - No graph regularization
 - Initialization via joint NMF
 
 #### TODO
+- [x] Update documentation
 - [ ] Upload derivation for sparisty regularization on task-specific Vs
 - [x] Test sparsity regularization
 - [ ] Try to reduce matrix copying after initialization via joint NMF (somehow force matrix views to stick around in the heap??)
