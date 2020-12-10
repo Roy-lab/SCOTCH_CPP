@@ -59,7 +59,7 @@ See example in input/toy_tree.txt.
 - Column 1: **node ID**; start from 1 and move up.
 - Column 2: **parent node ID**; right now the implementation will only work correctly if you ID all children nodes before a parent node (so start from the lowest depth of tree, move to next level, till you hit the root, which should be the last node ID.)
 - Column 3: **node alias**, used as prefix to U and V output files.
-- Column 4: **location of input matrix file for leaf nodes**, relative to where the run_tmi executable is. Set as N/A for non-leaf nodes.
+- Column 4: **location of input matrix file for leaf nodes**, relative to where the `run_tmi` executable is. Set as N/A for non-leaf nodes.
 - Column 5: **number of rows/data points in each input matrix**. Set as N/A for non-leaf nodes.
 
 #### Input matrix format
