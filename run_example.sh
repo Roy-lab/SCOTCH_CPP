@@ -1,1 +1,1 @@
-./run_tmi input/toy_tree.txt 120 2 -o output/
+./run_tmf input/toy_tree.txt 120 2 -o output/

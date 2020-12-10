@@ -21,10 +21,12 @@ class TMF {
 			for (vector<Node*>::iterator itr=tree.begin(); itr!=tree.end(); ++itr) {
 				gsl_matrix_free((*itr)->get_V());
 				if ((*itr)->is_leaf()) {
-					gsl_matrix_free(((Leaf*)(*itr))->get_X());
+					//gsl_matrix_free(((Leaf*)(*itr))->get_X());
+					free(((Leaf*)(*itr))->get_X()); //freeing struct pointing to submatrix of monsterX
 					gsl_matrix_free(((Leaf*)(*itr))->get_U());
 				}
 			}
+			gsl_matrix_free(monsterX);
 			int l = tree.size();
 			for (int i = 0; i < l; i++) {
 				delete tree[i];
@@ -48,6 +50,7 @@ class TMF {
 		double alpha;
 		double lambda;
 		vector<Node*> tree;
+		gsl_matrix* monsterX;
 		list<double> reconstruction_err_;
 };
 #endif

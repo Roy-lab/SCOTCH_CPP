@@ -52,7 +52,7 @@ int TMF::make_tree(vector<int>& parentIds, vector<string>& aliases, vector<strin
 	int nNodes = parentIds.size();
 
 	int nTotal = accumulate(n.begin(), n.end(), 0);
-	gsl_matrix* monsterX = gsl_matrix_calloc(nTotal, m);
+	monsterX = gsl_matrix_calloc(nTotal, m);
 	int offset = 0;
 	for (int i = 0; i < nTasks; i++) {
 		gsl_matrix_view currX = gsl_matrix_submatrix(monsterX, offset, 0, n[i], m);
@@ -77,10 +77,18 @@ int TMF::make_tree(vector<int>& parentIds, vector<string>& aliases, vector<strin
 		gsl_matrix* V = gsl_matrix_alloc(n_components, m);
 		gsl_matrix_memcpy(V, V1);
 		if (i < nTasks) {
-			gsl_matrix_view currX = gsl_matrix_submatrix(monsterX, offset, 0, n[i], m);
+			// get submatrix of monster X corresponding to this task
+			gsl_matrix* X = (gsl_matrix*)malloc(sizeof(*X));
+			X->size1=n[i];
+			X->size2=monsterX->size2;
+			X->tda=monsterX->tda;
+			X->data=&(monsterX->data[offset * monsterX->tda]);
+			X->block=NULL;
+			X->owner = 0;
+			// copy over submatrix X corresponding to this task
+			// (can't split like X due to row-major issue, but
+			// Us are much smaller so not as bad)
 			gsl_matrix_view currU = gsl_matrix_submatrix(monsterU, 0, offset, n_components, n[i]);
-			gsl_matrix* X = gsl_matrix_alloc(n[i], m);
-			gsl_matrix_memcpy(X, &currX.matrix);
 			gsl_matrix* U = gsl_matrix_alloc(n_components, n[i]);	
 			gsl_matrix_memcpy(U, &currU.matrix);
 			Leaf* leaf = new Leaf(X, U, V, n_components, alpha, lambda, aliases[i]);
@@ -97,7 +105,6 @@ int TMF::make_tree(vector<int>& parentIds, vector<string>& aliases, vector<strin
 		}		
 	}
 
-	gsl_matrix_free(monsterX);
 	gsl_matrix_free(V1);
 	gsl_matrix_free(monsterU);
 
