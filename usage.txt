@@ -1,1 +1,68 @@
-Coming soon.
+Usage:
+./run_tmi <tree file> <number of features> <k> <optional arguments>
+
+Example:
+./run_tmi input/toy_tree.txt 120 2 -o output/
+
+Input tree file format:
+======= example ========
+1 3 A input/toy/A.txt 95
+2 3 B input/toy/B.txt 80
+3 -1 root N/A N/A
+========================
+- Column 1: node ID; start from 1 and move up.
+- Column 2: parent node ID; right now the implementation will only 
+	work correctly if you ID all children nodes before a parent node 
+	(so start from the lowest depth of tree, move to next level, till 
+	you hit the root, which should be the last node ID.)
+- Column 3: node alias, used as prefix to U and V output files.
+- Column 4: location of input matrix file for leaf nodes, relative 
+	to where the run_tmi executable is. Set as N/A for non-leaf nodes.
+- Column 5: number of samples/data points/rows in each input matrix; 
+	should be the same as the number of features/columns for now. Set 
+	as N/A for non-leaf nodes.
+
+Input matrix file format:
+- Tab-delimited "dense" matrix text files.
+- Each column represents a feature (e.g. gene); each row represents 
+	a data point (e.g. cell).
+- All input matrix files listed in the tree file should have the same 
+	number of features/columns (they can have different number of rows 
+	or data points).
+
+Output files:
+- [leaf]_U.txt and [leaf]_V.txt for each leaf node; [leaf] will be
+	replaced with the node's alias.
+- [node]_V.txt for each internal node and the root node; [node] will
+	be replaced with the node's alias.
+
+Optional arguments:
+-o <output file prefix>
+	If <ouput file prefix> = output/ then output files will be 
+	saved to output directory (note: will NOT create a directory 
+	if it does not exist). By default output will be saved to 
+	current directory.
+-a <alpha>
+	If <alpha> = 100, sets alpha (strength of tree regularization)
+	to 100. Default is alpha = 10.
+-l <lambda>
+	If <lambda> = 200, sets lambda (strength of sparsity constraint)
+	to 200. Default is lambda = 0, no sparsity constraint.
+-s
+	Run in slient mode, nothing printed to stdout. By default, 
+	error/objective value at each iteration is printed, and the
+	total run time and max RAM usage is printed at the end.
+-r <random state>
+	Random state/seed used for rNNDSVD initialization. Default
+	random state = 1010. 
+-t <tol>
+	If <tol> = 10, the algorithm will keep iterating until the
+	absolute difference between the previous iteration's error
+	and current iteration's error is less than 10. By default,
+	tol = 1.
+-m <max iter>
+	If <max iter> = 200, the algorithm will terminate at 200
+	iterations if it has not coverged based on the tolerance (tol)
+	parameter by then. By default, max iter = 300.
+-h
+	Print this manual to screen. 

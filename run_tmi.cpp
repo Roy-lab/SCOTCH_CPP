@@ -44,8 +44,6 @@ int main(int argc, char **argv)
 	double tol = 1;
 	double alpha = 10;
 	double lambda = 0;
-	int neighborhoodRadius = 2; 
-	string graphFile = "";
 	string usage = string("usage.txt");
 
 	int c;
