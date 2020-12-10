@@ -77,7 +77,7 @@ See example in input/toy_tree.txt.
 | 3     | k     | The lower dimension of the factors (i.e. number of clusters) | N/A | 
 | optional | -o \<output_file_prefix\>    | Ouput file path. Note: will NOT create a directory if the specified directory does not exist. | Output files will save to current directory. | 
 | optional | -a \<alpha\>  | Strenth of tree regularization, higher value enfoces higher similarity to parent node. |  10 | 
-| optional | -l \<lambda\>  | Strength of the sparsity constraint. Larger value results in sparser leaf node factor V. | 0, i.e. no sparsity regularization. |  
+| optional | -l \<lambda\>  | Strength of the sparsity constraint. Larger value results in sparser leaf node (i.e. task-specific) factor V. | 0, i.e. no sparsity regularization. |  
 | optional | -s  | Run in slient mode, nothing printed to stdout. | Error, total run time, max memory usage printed to stdout. | 
 | optional | -r \<random_state\> | Random state/seed used for rNNDSVD initialization. | 1010|
 | optional | -t \<tol\> | Determines convergence and the termination of iterations. If \<tol\> = 10, the algorithm will keep iterating until the absolute difference between the previous iteration's error and current iteration's error is less than 10.| 1 |
@@ -90,6 +90,7 @@ See example in input/toy_tree.txt.
 #### Difference from TGIF
 - No graph regularization
 - Initialization via joint NMF
+- Sparsity regularization for leaf node (i.e. task-specific) factor V.
 
 #### TODO
 - [x] Update documentation
