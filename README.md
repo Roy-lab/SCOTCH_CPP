@@ -33,13 +33,14 @@ Note: in order to implement NNDSVD initialization of factors, a fast randomized 
 
 #### Basic usage
 ```
-./run_tmi input/toy_tree.txt 120 2 -o output/
+./run_tmi input/toy_tree.txt 120 2 -o output/ -a 10 -l 200
 ```
-- `input/toy_tree.txt` specifies the tree file, which contains file locations to individual task matrices (paths are relative to location of run_tgif executable location). 
+- `input/toy_tree.txt` specifies the tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmi executable location). 
 - `120` is the number of features/columns in each task matrix, which has to be be the same across all tasks. This current version assume a symmetric matrix.
 - `2` = k, the smaller dimensions of U and V. 
--	`-o output/` will put all output files to output/ directory. Check out the example output directory in the repo.
--	`-a 10` will set the alpha (strength of regularization to parent node) to be 10. Default is alpha = 10.
+-	[Optional] `-o output/` will put all output files to output/ directory. Check out the example output directory in the repo. By default output will be saved to current directory.
+-	[Optional] `-a 10` will set the alpha (strength of regularization to parent node) to be 10. Default is alpha = 10.
+- [Optional] `-l 200` will set lambda (strength of sparsity constraint) to be 200. By default there is no sparsity constraint, i.e., lambda = 0.
 
 #### Input tree file format
 See example in input/toy_tree.txt.
@@ -60,5 +61,5 @@ See example in input/toy_tree.txt.
 
 #### TODO
 - [ ] Upload derivation for sparisty regularization on task-specific Vs
-- [ ] Test sparsity regularization
+- [x] Test sparsity regularization
 - [ ] Try to reduce matrix copying after initialization via joint NMF (somehow force matrix views to stick around in the heap??)
