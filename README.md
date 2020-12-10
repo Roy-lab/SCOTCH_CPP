@@ -1,7 +1,6 @@
 ### Tree-guided multi-task matrix factorization in C++
 
-Quicklinks:
-- [Installation instruction]()
+- [Installation instruction](#step-1-install)
 - [Basic usage](#basic-usage)
 - [Input file formats](#input-tree-file-format)
 - [Parameters](#parameters)
