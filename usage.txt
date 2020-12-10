@@ -19,8 +19,7 @@ Input tree file format:
 - Column 4: location of input matrix file for leaf nodes, relative 
 	to where the run_tmi executable is. Set as N/A for non-leaf nodes.
 - Column 5: number of samples/data points/rows in each input matrix; 
-	should be the same as the number of features/columns for now. Set 
-	as N/A for non-leaf nodes.
+	Set as N/A for non-leaf nodes.
 
 Input matrix file format:
 - Tab-delimited "dense" matrix text files.
