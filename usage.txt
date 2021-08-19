@@ -1,8 +1,8 @@
 Usage:
-./run_tmf <tree file> <number of features> <k> <optional arguments>
+./run_nmtf <tree file> <number of features> <ucomponent> <vcomponent> <optional arguments>
 
 Example:
-./run_tmf input/toy_tree.txt 120 2 -o output/
+./run_mmtf input/toy_tree.txt 120 2 -o output/
 
 Input tree file format:
 ======= example ========

@@ -151,6 +151,43 @@ int init::random(gsl_matrix* W, gsl_matrix* H, int seed) {
 	return 0;
 }
 
+int init::random(gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, int seed) {
+        int k1 = W->size1;
+	int k2 = H->size1;
+        int rowCnt = W->size2;
+        int colCnt = H->size2;
+
+        const gsl_rng_type* T;
+        gsl_rng* ri;
+        gsl_rng_env_setup();
+        T = gsl_rng_default;
+        ri = gsl_rng_alloc(T);
+        gsl_rng_set(ri, seed);
+
+        for (int i = 0; i < k1; i++) {
+                for (int j = 0; j < rowCnt; j++) {
+                        double *val = &(W->data[i * W->tda + j]);
+                        *val = gsl_rng_uniform(ri);
+                }
+        }
+
+        for (int i = 0; i < k2; i++) {
+                for (int j = 0; j < colCnt; j++) {
+                        double *val = &(H->data[i * H->tda + j]);
+                        *val = gsl_rng_uniform(ri);
+                }
+        }
+
+	for (int i = 0; i < k1; i++) {
+		for (int j = 0; j < k2; j++) {
+			double *val = &(D->data[i * H->tda + j]);
+			*val = gsl_rng_uniform(ri);
+		}
+	}
+        gsl_rng_free(ri);
+        return 0;
+}
+
 //SR added this for handling assym matrices
 int
 init::random(gsl_matrix* W, int seed) {

@@ -5,6 +5,7 @@ using namespace std;
 
 namespace init{
 	int nndsvd(gsl_matrix*, gsl_matrix*, gsl_matrix*, int);
+	int random(gsl_matrix*, gsl_matrix*, gsl_matrix*, int);
 	int random(gsl_matrix*, gsl_matrix*, int);
 	int random(gsl_matrix*, int);
 };
