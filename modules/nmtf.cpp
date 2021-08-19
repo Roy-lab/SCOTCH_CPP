@@ -6,6 +6,7 @@
 #include "initialization.h"
 #include "nmtf.h"
 #include "utils.h"
+#include "io.h"
 
 NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, double termTol) {
 	u_components = k;
@@ -147,6 +148,16 @@ double NMTF::calculate_objective() {
 	return error;
 }
 
+int NMTF::write_test_files(){
+	io::write_dense_matrix("test/X.txt", X);
+	io::write_dense_matrix("test/U.txt", U);
+        io::write_dense_matrix("test/V.txt", V);
+        io::write_dense_matrix("test/S.txt", S);
+        io::write_dense_matrix("test/P.txt", P);
+        io::write_dense_matrix("test/Q.txt", Q);
+	return 0;
+}
+
 int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D) {
 	X = inputmat;
 	n = X->size1;
@@ -157,7 +168,7 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 	P = gsl_matrix_alloc(v_components, n);
 	Q = gsl_matrix_alloc(u_components, m);
 	R = gsl_matrix_alloc(n,m);
-
+	
 	if ((U->size1 != u_components) || (V->size1 != v_components)) {
 		cout << "The first dimension of U and V (i.e. their number of rows) should equal the number of components specified when instantiating NMF." << endl;
 		return 1;
@@ -174,7 +185,7 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 	
  	update_P();
 	update_Q();
-	
+		
 	double old_error = calculate_objective();
 	double old_slope;
 	for (int n_iter =0; n_iter < max_iter; n_iter++){

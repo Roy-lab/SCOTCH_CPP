@@ -21,7 +21,7 @@ matf:
 rsvd:
 	$(CC) -c -o modules/random_svd/rsvd.o modules/random_svd/low_rank_svd_algorithms_gsl.c -I${INCLUDE_PATH}
 
-run_tmf:
+run_nmtf:
 	$(XX) run_nmtf.cpp modules/*.cpp modules/random_svd/*.o -o run_nmtf $(CFLAGS) -L${LIBRARY_PATH} ${GSLFLAGS} -I${INCLUDE_PATH}
 
 clean:

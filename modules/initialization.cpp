@@ -180,7 +180,7 @@ int init::random(gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, int seed) {
 
 	for (int i = 0; i < k1; i++) {
 		for (int j = 0; j < k2; j++) {
-			double *val = &(D->data[i * H->tda + j]);
+			double *val = &(D->data[i * D->tda + j]);
 			*val = gsl_rng_uniform(ri);
 		}
 	}

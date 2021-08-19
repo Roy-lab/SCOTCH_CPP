@@ -83,7 +83,7 @@ int io::read_dense_matrix(string inputFile, gsl_matrix* X) {
 		char* tok=strtok(buff,"\t");
 		while(tok!=NULL)
 		{
-			if(colid>0)
+			if(colid>=0)
 			{
 				val=atof(tok);
 				gsl_matrix_set(X, rowid, colid, val);

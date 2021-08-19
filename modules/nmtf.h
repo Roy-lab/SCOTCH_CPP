@@ -39,6 +39,7 @@ class NMTF {
 		int update_ith_jth_of_S(int, int);
 		int update();
 		int normalize_and_scale();
+		int write_test_files();
 		double calculate_objective();
 };
 #endif
