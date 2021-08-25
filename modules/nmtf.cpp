@@ -111,6 +111,10 @@ int NMTF::update() {
 			update_ith_jth_of_S(k1, k2); 	
 			gsl_blas_dger(-*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
 		}
+		gsl_vector_view s_k = gsl_matrix_row(S, k1);
+	 	if (gsl_vector_isnull(&s_k.vector)) {
+                	gsl_vector_set_all(&s_k.vector, 0.01);
+        	}
 	}
 	update_P();
 	update_Q();	
