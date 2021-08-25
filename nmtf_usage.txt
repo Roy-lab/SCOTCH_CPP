@@ -1,0 +1,43 @@
+Usage:
+./run_nmtf <matrix file> <number of samples/rows> <number of features/columns> <k1> <k2> <optional arguments>
+
+Example:
+./run_nnmf input/toy/A.txt 95 120 2 -o output/
+
+Input matrix file format:
+- Tab-delimited "dense" matrix text files.
+- Each column represents a feature (e.g. gene); each row represents 
+	a data point (e.g. cell).
+
+Output files:
+- [prefix]U.txt, [prefix]S.txt, and [prefix]V.txt for the factors U, S, and V.
+- Note: U output is in k1 x n, S output is k1 x k2, and V in k2 x m.
+
+Optional arguments:
+-o <output file prefix>
+	If <ouput file prefix> = output then output files will be 
+	saved to output directory (note: will NOT create a directory 
+	if it does not exist). By default output will be saved to 
+	current directory.
+-l <lambda>
+	If <lambda> = 200, sets lambda (strength of orthogonality constraint)
+	to 200. Default is lambda = 0, no orthogonality constraint. (not yet implemented)
+-s
+	Run in slient mode, nothing printed to stdout. By default, 
+	error/objective value at each iteration is printed, and the
+	total run time and max RAM usage is printed at the end.
+-r <random state>
+	Random state/seed used for rNNDSVD (rNNDSVD not yet implemented) initialization. 
+	Default random state = 1010. (Should implement a time dependent random 
+	initilization for different random initilization)
+-t <tol>
+	If <tol> = 10, the algorithm will keep iterating until the
+	absolute difference between the previous iteration's error
+	and current iteration's error is less than 10. By default,
+	tol = 1.
+-m <max iter>
+	If <max iter> = 200, the algorithm will terminate at 200
+	iterations if it has not coverged based on the tolerance (tol)
+	parameter by then. By default, max iter = 300.
+-h
+	Print this manual to screen. 
