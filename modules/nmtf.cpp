@@ -149,7 +149,8 @@ int NMTF::normalize_and_scale_u() {
                 gsl_vector_scale(&s_k1.vector, norm);
         }
 	update_P();
-        return 0;
+        update_Q();
+	return 0;
 }
 
 
@@ -161,6 +162,7 @@ int NMTF::normalize_and_scale_v() {
 		gsl_vector_scale(&v_k2.vector, 1/norm);
 		gsl_vector_scale(&s_k2.vector, norm);
 	}
+	update_P();
 	update_Q();
 	return 0;
 }
@@ -208,10 +210,20 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 	} else { //still needs to be editted
 		init::nndsvd(X, U, V, random_state);
 	}
+	
+	update_P();
+	update_Q();
+	cout << calculate_objective() << endl;
+	normalize_and_scale_u();
+	normalize_and_scale_v();
+	cout << calculate_objective() << endl;
 	double old_error = calculate_objective();
 	double old_slope;
 	for (int n_iter =0; n_iter < max_iter; n_iter++){
 		update();
+		normalize_and_scale_u();
+		normalize_and_scale_v();
+
 		double error = calculate_objective();
 		double slope = old_error - error;
 		if (verbose) {
