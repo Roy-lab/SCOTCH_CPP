@@ -38,7 +38,8 @@ class NMTF {
 		int update_kth_block_of_V(int);
 		int update_ith_jth_of_S(int, int);
 		int update();
-		int normalize_and_scale();
+		int normalize_and_scale_u();
+		int normalize_and_scale_v();
 		int write_test_files();
 		double calculate_objective();
 };

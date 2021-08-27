@@ -86,6 +86,7 @@ int NMTF::update_ith_jth_of_S(int k1, int k2){
 }
 
 int NMTF::update() {
+	write_test_files();
 	for (int k1 = 0; k1 < u_components; k1++) {
 		gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
 		gsl_vector_view q_k1 = gsl_matrix_row(Q, k1);
@@ -93,7 +94,7 @@ int NMTF::update() {
 		update_kth_block_of_U(k1);
 		gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
 	}
-	update_P();	
+	update_P();
 	for (int k2 = 0; k2 < v_components; k2++){
                 gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
                 gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
@@ -116,34 +117,55 @@ int NMTF::update() {
                 	gsl_vector_set_all(&s_k.vector, 0.01);
         	}
 	}
+	
 	update_P();
-	update_Q();	
+	update_Q();
 	return 0;
 }
 
 
 int NMTF::update_P() {
+	//gsl_matrix_memcpy(R, X);
+      	//gsl_blas_dgemm(CblasTrans, CblasNoTrans, -1, P, V, 1, R);
         gsl_blas_dgemm(CblasTrans, CblasNoTrans, 1, S, U, 0, P);
 	return 0;
 }
 
+
 int NMTF::update_Q() {
+	//gsl_matrix_memcpy(R, X);
+        //gsl_blas_dgemm(CblasTrans, CblasNoTrans, -1, P, V, 1, R);
 	gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1, S, V, 0, Q);
 	return 0;
 }
 
-//Needs to be updated
-int NMTF::normalize_and_scale() {
-	for (int k = 0; k < u_components; k++) {
-		gsl_vector_view u_k = gsl_matrix_row(U, k);
-		gsl_vector_view v_k = gsl_matrix_row(V, k);
-		double norm = gsl_blas_dnrm2(&v_k.vector);
-		gsl_vector_scale(&v_k.vector, 1/norm);
-		gsl_vector_scale(&u_k.vector, norm);
+
+int NMTF::normalize_and_scale_u() {
+        for (int k1 = 0; k1 < u_components; k1++) {
+                gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
+                gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+                double norm = gsl_blas_dnrm2(&u_k1.vector);
+		gsl_vector_scale(&u_k1.vector, 1/norm);
+                gsl_vector_scale(&s_k1.vector, norm);
+        }
+	update_P();
+        return 0;
+}
+
+
+int NMTF::normalize_and_scale_v() {
+	for (int k2 = 0; k2 < v_components; k2++) {
+		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
+		gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+		double norm = gsl_blas_dnrm2(&v_k2.vector);
+		gsl_vector_scale(&v_k2.vector, 1/norm);
+		gsl_vector_scale(&s_k2.vector, norm);
 	}
+	update_Q();
 	return 0;
 }
 
+		
 double NMTF::calculate_objective() {
 	gsl_matrix_memcpy(R, X);
   	gsl_blas_dgemm(CblasTrans, CblasNoTrans, -1, P, V, 1, R);
@@ -186,10 +208,6 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 	} else { //still needs to be editted
 		init::nndsvd(X, U, V, random_state);
 	}
-	
- 	update_P();
-	update_Q();
-		
 	double old_error = calculate_objective();
 	double old_slope;
 	for (int n_iter =0; n_iter < max_iter; n_iter++){
@@ -220,7 +238,6 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 		cout << endl;
 	}
 	*/
-
 	return 0;
 }
 
