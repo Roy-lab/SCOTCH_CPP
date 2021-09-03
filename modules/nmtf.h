@@ -10,12 +10,20 @@ class NMTF {
 	public:
 		NMTF(int, init_method, int, int, bool, double);
 		NMTF(int, int, init_method, int, int, bool, double);
+		NMTF(int, int, init_method, int, int, bool, double, double, double);
+		NMTF(int, int, init_method, int, int, bool, double, double, double, double, double);
+		
 		~NMTF();
 		int fit(gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*);
 		int u_components;
 		int v_components;
 		int n;
 		int m;
+		int test;
+		double lambdaU;
+		double lambdaV;
+		double alphaU;
+		double alphaV;
 		init_method init;
 		int max_iter;
 		int random_state;
@@ -40,7 +48,7 @@ class NMTF {
 		int update();
 		int normalize_and_scale_u();
 		int normalize_and_scale_v();
-		int write_test_files();
+		int write_test_files(string);
 		double calculate_objective();
 };
 #endif

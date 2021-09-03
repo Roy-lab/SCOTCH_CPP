@@ -19,9 +19,22 @@ Optional arguments:
 	saved to output directory (note: will NOT create a directory 
 	if it does not exist). By default output will be saved to 
 	current directory.
--l <lambda>
-	If <lambda> = 200, sets lambda (strength of orthogonality constraint)
-	to 200. Default is lambda = 0, no orthogonality constraint. (not yet implemented)
+-a <alphaV>
+	If <alphaV> = 200, sets the alpha (strength of sparsity constraint) 
+	on the V matrix to 200. Default is alpha = 0, no sparsity constraint.
+	= 0. 
+
+-b <alphaU>
+	if <alphaU> = 200, sets the alpha (strength of sparsity constraint) 
+	on the U matrix to 200. Default is alpha = 0, no sparsity constraint.
+
+-l <lambdaV>
+	If <lambdaV> = 200, sets lambda (strength of orthogonality constraint)
+	to 200. Default is lambda = 0, no orthogonality constraint. 
+
+k <lambdaU>
+	If <lamdaU> = 200, sets lambda (strength of orthogonality constrain
+	to 200. Default is lambda = 0, no orthogonality constraint.
 -s
 	Run in slient mode, nothing printed to stdout. By default, 
 	error/objective value at each iteration is printed, and the

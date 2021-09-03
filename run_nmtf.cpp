@@ -39,12 +39,15 @@ int main(int argc, char **argv)
 	int verbose = true;
 	int maxIter = 300;
 	double tol = 1;
-	double alpha = 10; //not currently used
-	double lambda = 0; //not currently used
+	double alphaU = 0;
+	double lambdaU = 0;
+	double alphaV = 0;
+	double lambdaV = 0;
+ 
 	string usage = string("usage_nmtf.txt");
 
 	int c;
-	while((c = getopt(argc, argv, "o:r:s:m:t:a:l:g")) != -1)
+	while((c = getopt(argc, argv, "o:r:s:m:t:a:l:b:k:h")) != -1)
 		switch (c) {
 			case 'o':
 				outputPrefix = string(optarg);
@@ -62,10 +65,16 @@ int main(int argc, char **argv)
 				tol = atof(optarg);
 				break;
 			case 'a':
-				alpha = atof(optarg);
+				alphaV = atof(optarg);
 				break;
 			case 'l':
-				lambda = atof(optarg);
+				lambdaV = atof(optarg);
+				break;
+			case 'b':
+				alphaU = atof(optarg);
+				break;
+			case 'k':
+				lambdaU = atof(optarg);
 				break;
 			case 'h':
 				io::print_usage(usage);
@@ -96,7 +105,7 @@ int main(int argc, char **argv)
 	gsl_matrix* S = gsl_matrix_calloc(uComponents, vComponents);
 	io::read_dense_matrix(matrixFileName, X);
 
-	NMTF nmtf = NMTF(uComponents, vComponents, random_init,  maxIter,randomState,verbose,tol);
+	NMTF nmtf = NMTF(uComponents, vComponents, random_init,  maxIter, randomState, verbose, tol, alphaU, lambdaU, alphaV, lambdaV);
 	nmtf.fit(X, U, V, S);
 	io::write_dense_matrix(outputPrefix+"U.txt", U);
 	io::write_dense_matrix(outputPrefix+"V.txt", V);
