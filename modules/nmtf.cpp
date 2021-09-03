@@ -105,6 +105,7 @@ int NMTF::update_kth_block_of_U(int k){
 		gsl_vector* alpha = gsl_vector_calloc(n);
 		gsl_vector_set_all(alpha, alphaU/q_norm);
 		gsl_vector_sub(&u_k.vector, alpha);
+		gsl_vector_free(alpha);
 	}
 
 	for (int i = 0; i < n; i++) {
@@ -146,6 +147,7 @@ int NMTF::update_kth_block_of_V(int k){
 		gsl_vector* alpha = gsl_vector_calloc(m);
 		gsl_vector_set_all(alpha, alphaV/p_norm);
 		gsl_vector_sub(&v_k.vector, alpha);	
+		gsl_vector_free(alpha);
 	}
 
 
