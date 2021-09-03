@@ -8,10 +8,10 @@ enum init_method {nndsvd_init, random_init};
 
 class NMTF {
 	public:
-		NMTF(int, init_method, int, int, bool, double);
-		NMTF(int, int, init_method, int, int, bool, double);
-		NMTF(int, int, init_method, int, int, bool, double, double, double);
-		NMTF(int, int, init_method, int, int, bool, double, double, double, double, double);
+		NMTF(int, init_method, int, int, bool, double, list<double>*);
+		NMTF(int, int, init_method, int, int, bool, double, list<double>*);
+		NMTF(int, int, init_method, int, int, bool, double, list<double>*, double, double);
+		NMTF(int, int, init_method, int, int, bool, double, list<double>*, double, double, double, double);
 		
 		~NMTF();
 		int fit(gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*);
@@ -29,7 +29,7 @@ class NMTF {
 		int random_state;
 		bool verbose;
 		double tol;
-		list<double> reconstruction_err_;
+		list<double>*  reconstruction_err_;
 
 	private:
 		gsl_matrix* X;

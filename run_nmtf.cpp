@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 	double lambdaU = 0;
 	double alphaV = 0;
 	double lambdaV = 0;
- 
+	list<double> *err= new list<double>;
 	string usage = string("usage_nmtf.txt");
 
 	int c;
@@ -105,8 +105,9 @@ int main(int argc, char **argv)
 	gsl_matrix* S = gsl_matrix_calloc(uComponents, vComponents);
 	io::read_dense_matrix(matrixFileName, X);
 
-	NMTF nmtf = NMTF(uComponents, vComponents, random_init,  maxIter, randomState, verbose, tol, alphaU, lambdaU, alphaV, lambdaV);
+	NMTF nmtf = NMTF(uComponents, vComponents, random_init,  maxIter, randomState, verbose, tol, err, alphaU, lambdaU, alphaV, lambdaV);
 	nmtf.fit(X, U, V, S);
+	io::write_list(outputPrefix+"err.txt", *err);
 	io::write_dense_matrix(outputPrefix+"U.txt", U);
 	io::write_dense_matrix(outputPrefix+"V.txt", V);
 	io::write_dense_matrix(outputPrefix+"S.txt", S);
@@ -132,5 +133,6 @@ int main(int argc, char **argv)
 	gsl_matrix_free(U);
 	gsl_matrix_free(V);
 	gsl_matrix_free(S);
+	delete err;
 	return 0;
 }
