@@ -10,7 +10,7 @@
 #include "utils.h"
 #include "io.h"
 
-NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err) {
+NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, list<double> *slope) {
 	u_components = k;
 	v_components = k;
 	init = initMethod;
@@ -19,6 +19,7 @@ NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, doub
 	verbose = verb;
 	tol = termTol;
 	reconstruction_err_ = err;
+	reconstruction_slope_ = slope;
 	alphaU = 0;
         lambdaU = 0;
         alphaV = 0;
@@ -26,7 +27,7 @@ NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, doub
 	test=0;
 }
 
-NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err){
+NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, list<double> *slope){
 	u_components = k1;
 	v_components = k2;
 	init = initMethod;
@@ -35,6 +36,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
 	verbose = verb;
 	tol = termTol;
 	reconstruction_err_ = err;
+	reconstruction_slope_ = slope;
 	alphaU = 0;
         lambdaU = 0;
         alphaV = 0;
@@ -42,7 +44,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
 	test=0;
 }
 
-NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, double aU, double lU){
+NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, list<double> *slope, double aU, double lU){
         u_components = k1;
         v_components = k2;
         init = initMethod;
@@ -51,6 +53,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
         verbose = verb;
         tol = termTol;
         reconstruction_err_ = err;
+	reconstruction_slope_ = slope;
 	alphaU = aU;
 	lambdaU = lU;
 	alphaV = 0;
@@ -58,7 +61,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
 	test=0;
 }
 
-NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, double aU, double lU, double aV, double lV){
+NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, list<double> *slope, double aU, double lU, double aV, double lV){
         u_components = k1;
         v_components = k2;
         init = initMethod;
@@ -67,6 +70,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
         verbose = verb;
         tol = termTol;
         reconstruction_err_ = err;
+	reconstruction_slope_ = slope;
 	alphaU = aU;
         lambdaU = lU;
         alphaV = aV;
@@ -331,6 +335,7 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 		//test++;
 		double error = calculate_objective();
 		double slope = old_error - error;
+		reconstruction_slope_->push_back(slope);
 		if (verbose) {
 			cout << "Itr " << n_iter+1 << " error = " << error << ", slope = " << slope << endl;
 		}
