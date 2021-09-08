@@ -120,7 +120,7 @@ int NMTF::update_kth_block_of_U(int k){
 	}
 	
 	if (gsl_vector_isnull(&u_k.vector)) {
-		gsl_vector_set_all(&u_k.vector, 0.01);
+		gsl_vector_set_all(&u_k.vector, 1/double(n));
 	}
 	return 0;
 }
@@ -131,7 +131,7 @@ int NMTF::update_kth_block_of_V(int k){
 	double p_norm = pow(gsl_blas_dnrm2(&p_k.vector), 2);
 	gsl_blas_dgemv(CblasTrans, 1/p_norm, R, &p_k.vector, 0, &v_k.vector);
 	int m = R->size2;
-	
+ 		
 	//Orthogonality Term
 	if (lambdaV > 0) {
 		gsl_vector* v_others = gsl_vector_calloc(m);
@@ -164,7 +164,7 @@ int NMTF::update_kth_block_of_V(int k){
 
 	
 	if (gsl_vector_isnull(&v_k.vector)) {
-		gsl_vector_set_all(&v_k.vector, 0.01);
+		gsl_vector_set_all(&v_k.vector, 1/double(m));
 	}
 	return 0;
 }
@@ -216,13 +216,13 @@ int NMTF::update() {
 		}
 		gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
 	 	if (gsl_vector_isnull(&s_k1.vector)) {
-                	gsl_vector_set_all(&s_k1.vector, 0.01);
+                	gsl_vector_set_all(&s_k1.vector, 1/double(u_components));
         	}
 	}
 	for (int k2 = 0; k2 < v_components; k2++){
 		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);	
 		if (gsl_vector_isnull(&s_k2.vector)) {
-                        gsl_vector_set_all(&s_k2.vector, 0.01);
+                        gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
         	}
 	}
 	//write_test_files("_before_Norm_");
@@ -306,6 +306,7 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 	P = gsl_matrix_alloc(v_components, n);
 	Q = gsl_matrix_alloc(u_components, m);
 	R = gsl_matrix_alloc(n,m);
+	int num_converge = 0;
 	
 	if ((U->size1 != u_components) || (V->size1 != v_components)) {
 		cout << "The first dimension of U and V (i.e. their number of rows) should equal the number of components specified when instantiating NMF." << endl;
@@ -339,14 +340,18 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 		if (verbose) {
 			cout << "Itr " << n_iter+1 << " error = " << error << ", slope = " << slope << endl;
 		}
-		if (slope < tol) {
-			if (verbose) {
-				cout << "Converged at iteration " << n_iter+1 << endl;	
+		if (0 < slope && slope < tol) {
+			num_converge++;
+			if (num_converge > 2){
+				if (verbose) {
+					cout << "Converged at iteration " << n_iter+1 << endl;	
+				}
+				break;
 			}
-			break;
 		} else {
 			old_error = error;
 			old_slope = slope;
+			num_converge = 0;
 		}
 	}
 	
