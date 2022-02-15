@@ -2,7 +2,7 @@ Usage:
 ./run_nmtf <matrix file> <number of samples/rows> <number of features/columns> <k1> <k2> <optional arguments>
 
 Example:
-./run_nnmf input/toy/A.txt 95 120 2 -o output/
+./run_nmtf input/toy/A.txt 95 120 2 -o output/
 
 Input matrix file format:
 - Tab-delimited "dense" matrix text files.

@@ -129,3 +129,39 @@ int io::read_tree(string inputFile,
 	return 0;
 }
 
+
+int io::read_k1_k2_list(string inputFile, vector<int>& k1_vec, vector<int>& k2_vec){
+	ifstream input(inputFile.c_str());
+	int k1, k2;
+	while(input >> k1 >> k2){
+		k1_vec.push_back(k1);
+		k2_vec.push_back(k2);
+	}
+	return 0;
+}
+
+int io::write_nmtf_output(gsl_matrix *U, gsl_matrix *V, gsl_matrix *S, gsl_matrix *R,list<double> *err, list<double> *slope, string& out_dir){
+        io::write_list(out_dir + "err.txt", *err);
+        io::write_list(out_dir + "slope.txt", *slope);
+        io::write_dense_matrix(out_dir + "U.txt", U);
+        io::write_dense_matrix(out_dir + "V.txt", V);
+        io::write_dense_matrix(out_dir + "S.txt", S);
+	//io::write_dense_matrix(out_dir + "R.txt", R);
+        return 0;
+}
+
+int io::write_mem_and_time(string out_file, unsigned long int time_diff, unsigned long int mem_diff){
+	ofstream ofs;
+	ofs.open(out_file.c_str());
+	ofs << "time:\t" << time_diff << endl;
+	ofs << "mem:\t" << mem_diff << endl;
+	ofs.close();
+	return 0;
+}
+
+int io::read_prev_results(string& in_dir, gsl_matrix *U, gsl_matrix *V, gsl_matrix *S){
+	io::read_dense_matrix(in_dir + "U.txt", U);
+	io::read_dense_matrix(in_dir + "V.txt", V);
+	io::read_dense_matrix(in_dir + "S.txt", S);
+	return 0;		
+}

@@ -14,5 +14,9 @@ namespace io
 	int write_list(string, list<double>&);
 	int read_tree(string, vector<int>&, vector<string>&, vector<string>&, vector<int>&);
 	int print_usage(string);
+	int read_k1_k2_list(string inputFile, vector<int>&, vector<int>&);
+	int write_nmtf_output(gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, list<double>*, list<double>*, string&);
+	int write_mem_and_time(string, unsigned long int, unsigned long int);
+	int read_prev_results(string&, gsl_matrix*, gsl_matrix*, gsl_matrix*);
 };
 #endif

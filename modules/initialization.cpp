@@ -188,9 +188,21 @@ int init::random(gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, int seed) {
         return 0;
 }
 
+int init::random(gsl_matrix* X, gsl_rng* ri){
+	int d1 = X->size1;
+	int d2 = X->size2;
+	
+	for (int i=0; i < d1; i++){
+		for (int j=0; j < d2; j++){
+			double *val = &(X->data[i * X->tda + j]);
+			* val = gsl_rng_uniform(ri);
+		}
+	}
+	return 0;
+}
+
 //SR added this for handling assym matrices
-int
-init::random(gsl_matrix* W, int seed) {
+int init::random(gsl_matrix* W, int seed) {
 	int k = W->size1;
 	int rowCnt = W->size2;
 

@@ -186,7 +186,6 @@ int NMTF::update_ith_jth_of_S(int k1, int k2){
 }
 
 int NMTF::update() {
-	//write_test_files("_before_U_");
 	for (int k1 = 0; k1 < u_components; k1++) {
 		gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
 		gsl_vector_view q_k1 = gsl_matrix_row(Q, k1);
@@ -195,7 +194,6 @@ int NMTF::update() {
 		gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
 	}
 	update_P();
-	//write_test_files("_before_V_");
 	for (int k2 = 0; k2 < v_components; k2++){
                 gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
                 gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
@@ -204,7 +202,6 @@ int NMTF::update() {
                 gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
 	}
 	update_Q();
-	//write_test_files("_before_S_");
 	for (int k1 = 0; k1 < u_components; k1++){
 		for(int k2 = 0; k2 < v_components; k2++){
 			double* s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
@@ -225,10 +222,77 @@ int NMTF::update() {
                         gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
         	}
 	}
-	//write_test_files("_before_Norm_");
 	update_P();
 	update_Q();
 	return 0;
+}
+
+int NMTF::update_US() {
+        for (int k1 = 0; k1 < u_components; k1++) {
+                gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+                gsl_vector_view q_k1 = gsl_matrix_row(Q, k1);
+                gsl_blas_dger( 1, &u_k1.vector, &q_k1.vector, R);
+                update_kth_block_of_U(k1);
+                gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
+        }
+        update_P();
+        for (int k1 = 0; k1 < u_components; k1++){
+                for(int k2 = 0; k2 < v_components; k2++){
+                        double* s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
+                        gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+                        gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+                        gsl_blas_dger( *s_k1_k2, &u_k1.vector, &v_k2.vector, R);
+                        update_ith_jth_of_S(k1, k2);
+                        gsl_blas_dger(-*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
+                }
+                gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
+                if (gsl_vector_isnull(&s_k1.vector)) {
+                        gsl_vector_set_all(&s_k1.vector, 1/double(u_components));
+                }
+        }
+        for (int k2 = 0; k2 < v_components; k2++){
+                gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
+                if (gsl_vector_isnull(&s_k2.vector)) {
+                        gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
+                }
+        }
+        update_P();
+        update_Q();
+        return 0;
+}       
+
+int NMTF::update_SV() {
+	for (int k2 = 0; k2 < v_components; k2++){
+                gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+                gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
+                gsl_blas_dger( 1, &p_k2.vector, &v_k2.vector, R);
+                update_kth_block_of_V(k2);
+                gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
+        }
+        update_Q();
+        for (int k1 = 0; k1 < u_components; k1++){
+                for(int k2 = 0; k2 < v_components; k2++){
+                        double* s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
+                        gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+                        gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+                        gsl_blas_dger( *s_k1_k2, &u_k1.vector, &v_k2.vector, R);
+                        update_ith_jth_of_S(k1, k2);
+                        gsl_blas_dger(-*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
+                }
+                gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
+                if (gsl_vector_isnull(&s_k1.vector)) {
+                        gsl_vector_set_all(&s_k1.vector, 1/double(u_components));
+                }
+        }
+        for (int k2 = 0; k2 < v_components; k2++){
+                gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
+                if (gsl_vector_isnull(&s_k2.vector)) {
+                        gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
+                }
+        }
+        update_P();
+        update_Q();
+        return 0;
 }
 
 
@@ -280,7 +344,6 @@ double NMTF::calculate_objective() {
 	gsl_matrix_memcpy(R, X);
   	gsl_blas_dgemm(CblasTrans, CblasNoTrans, -1, P, V, 1, R);
 	double error = utils::get_frobenius_norm(R);
-	reconstruction_err_->push_back(error);
 	return error;
 }
 
@@ -296,53 +359,47 @@ int NMTF::write_test_files(string s){
 	return 0;
 }
 
-int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D) {
+int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris) {
 	X = inputmat;
 	n = X->size1;
 	m = X->size2;
 	U = W;
 	V = H;
 	S = D;
+	R = Ris;
 	P = gsl_matrix_alloc(v_components, n);
 	Q = gsl_matrix_alloc(u_components, m);
-	R = gsl_matrix_alloc(n,m);
+	reconstruction_err_->clear();
+	reconstruction_slope_->clear();
 	int num_converge = 0;
 	
 	if ((U->size1 != u_components) || (V->size1 != v_components)) {
 		cout << "The first dimension of U and V (i.e. their number of rows) should equal the number of components specified when instantiating NMF." << endl;
 		return 1;
 	} 
-
-	if (verbose) {
-		cout << "Initializing..." << endl;
-	}
-	if (init == random_init) {
-		init::random(U, V, S, random_state);
-	} else { //still needs to be editted
-		init::nndsvd(X, U, V, random_state);
-	}
 	
 	update_P();
 	update_Q();
 	normalize_and_scale_u();
 	normalize_and_scale_v();
 	double old_error = calculate_objective();
+	reconstruction_err_->push_back(old_error);
 	double old_slope;
+	
 	for (int n_iter =0; n_iter < max_iter; n_iter++){
 		update();
 		normalize_and_scale_u();
 		normalize_and_scale_v();
-		//write_test_files("_after_Norm_");
-		//test++;
 		double error = calculate_objective();
-		double slope = old_error - error;
+		double slope = (old_error - error)/old_error;
+		reconstruction_err_->push_back(error);
 		reconstruction_slope_->push_back(slope);
 		if (verbose) {
 			cout << "Itr " << n_iter+1 << " error = " << error << ", slope = " << slope << endl;
 		}
 		if (0 < slope && slope < tol) {
 			num_converge++;
-			if (num_converge > 2){
+			if (num_converge > 0){
 				if (verbose) {
 					cout << "Converged at iteration " << n_iter+1 << endl;	
 				}
@@ -355,17 +412,267 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D)
 		}
 	}
 	
-	gsl_matrix_free(R);
 	gsl_matrix_free(P);
 	gsl_matrix_free(Q);
-	/*
-	for (int i = 0; i < n_components; i++) {
-		for (int j = 0; j < 10; j++) {
-			cout << U->data[i * U->tda + j] << ", ";
-		}
-		cout << endl;
-	}
-	*/
 	return 0;
 }
 
+
+int NMTF::fit_US(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris) {
+        X = inputmat;
+        n = X->size1;
+        m = X->size2;
+        U = W;
+        V = H;
+        S = D;
+        R = Ris;
+        P = gsl_matrix_alloc(v_components, n);
+        Q = gsl_matrix_alloc(u_components, m);
+        reconstruction_err_->clear();
+        reconstruction_slope_->clear();
+        int num_converge = 0;
+
+        if ((U->size1 != u_components) || (V->size1 != v_components)) {
+                cout << "The first dimension of U and V (i.e. their number of rows) should equal the number of components specified when instantiating NMF." << endl;
+                return 1;
+        }
+
+        update_P();
+        update_Q();
+        normalize_and_scale_u();
+        normalize_and_scale_v();
+        double old_error = calculate_objective();
+        reconstruction_err_->push_back(old_error);
+        double old_slope;
+
+        for (int n_iter =0; n_iter < max_iter; n_iter++){
+                update_US();
+                normalize_and_scale_u();
+                normalize_and_scale_v();
+                double error = calculate_objective();
+                double slope = (old_error - error)/old_error;
+                reconstruction_err_->push_back(error);
+                reconstruction_slope_->push_back(slope);
+                if (verbose) {
+                        cout << "Itr " << n_iter+1 << " error = " << error << ", slope = " << slope << endl;
+                }
+                if (0 < slope && slope < tol) {
+                        num_converge++;
+                        if (num_converge > 0){
+                                if (verbose) {
+                                        cout << "Converged at iteration " << n_iter+1 << endl;
+                                }
+                                break;
+                        }
+                } else {
+                        old_error = error;
+                        old_slope = slope;
+                        num_converge = 0;
+                }
+        }
+        gsl_matrix_free(P);
+        gsl_matrix_free(Q);
+        return 0;
+}
+
+int NMTF::fit_SV(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris) {
+        X = inputmat;
+        n = X->size1;
+        m = X->size2;
+        U = W;
+        V = H;
+        S = D;
+        R = Ris;
+        P = gsl_matrix_alloc(v_components, n);
+        Q = gsl_matrix_alloc(u_components, m);
+        reconstruction_err_->clear();
+        reconstruction_slope_->clear();
+        int num_converge = 0;
+
+        if ((U->size1 != u_components) || (V->size1 != v_components)) {
+                cout << "The first dimension of U and V (i.e. their number of rows) should equal the number of components specified when instantiating NMF." << endl;
+                return 1;
+        }
+
+        update_P();
+        update_Q();
+        double old_error = calculate_objective();
+        reconstruction_err_->push_back(old_error);
+        double old_slope;
+
+        for (int n_iter =0; n_iter < max_iter; n_iter++){
+                update_SV();
+                normalize_and_scale_u();
+                normalize_and_scale_v();
+                double error = calculate_objective();
+                double slope = (old_error - error)/old_error;
+                reconstruction_err_->push_back(error);
+                reconstruction_slope_->push_back(slope);
+                if (verbose) {
+                        cout << "Itr " << n_iter+1 << " error = " << error << ", slope = " << slope << endl;
+                }
+                if (0 < slope && slope < tol) {
+                        num_converge++;
+                        if (num_converge > 0){
+                                if (verbose) {
+                                        cout << "Converged at iteration " << n_iter+1 << endl;
+                                }
+                                break;
+                        }
+                } else {
+                        old_error = error;
+                        old_slope = slope;
+                        num_converge = 0;
+                }
+        }
+        gsl_matrix_free(P);
+        gsl_matrix_free(Q);
+        return 0;
+}
+
+
+
+
+
+int NMTF::increase_k1_fixed_k2(int k1, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* U_new, gsl_matrix* S_new, gsl_rng* ri){
+        int nSamples = X->size1;
+        int nComponents = X->size2;
+	int k1_diff = k1 - u_components;
+	u_components = k1_diff;
+        gsl_matrix *U_diff = gsl_matrix_calloc(k1_diff, nSamples);
+        gsl_matrix *S_diff = gsl_matrix_calloc(k1_diff, V->size1);
+        gsl_matrix *R_diff = gsl_matrix_calloc(nSamples, nComponents);
+	gsl_matrix* R_abs = gsl_matrix_calloc(nSamples, nComponents);
+        utils::matrix_abs(R, R_abs);
+	
+        init::random(U_diff, ri);
+        init::random(S_diff, ri);
+	string out_dir("temp/");	
+        fit_US(R_abs, U_diff, V, S_diff, R_diff);
+	//io::write_nmtf_output(U_diff, V, S_diff, R_abs, reconstruction_err_, reconstruction_slope_, out_dir);
+	
+	/*for(int i=0; i < k1_diff; i++){
+                gsl_vector_view U_k = gsl_matrix_row(U_diff, i);
+                subtract_factors(U, &U_k.vector);
+        }*/
+        utils::concat_matrix_rows( U, U_diff, U_new);
+        utils::concat_matrix_rows( S, S_diff, S_new);
+	//io::write_nmtf_output(U_new, V, S_new, R_abs, reconstruction_err_, reconstruction_slope_, out_dir);
+
+	u_components = k1;
+        fit(X, U_new, V, S_new, R);
+	//io::write_nmtf_output(U_new, V, S_new, R, reconstruction_err_, reconstruction_slope_, out_dir);
+        gsl_matrix_free(U_diff);
+        gsl_matrix_free(S_diff);
+        gsl_matrix_free(R_diff);
+        gsl_matrix_free(R_abs);
+	return 0;
+}
+
+int NMTF::increase_k2_fixed_k1(int k2, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* V_new, gsl_matrix* S_new, gsl_rng* ri){
+        int nSamples = X->size1;
+        int nComponents = X->size2;
+        int k2_diff=k2 - v_components;
+	v_components=k2_diff;
+	gsl_matrix *V_diff = gsl_matrix_calloc(k2_diff, nComponents);
+        gsl_matrix *S_diff = gsl_matrix_calloc(U->size1, k2_diff);
+        gsl_matrix *R_diff = gsl_matrix_calloc(nSamples, nComponents);
+	gsl_matrix* R_abs = gsl_matrix_calloc(nSamples, nComponents);
+        utils::matrix_abs(R, R_abs);
+	
+        init::random(V_diff, ri);
+        init::random(S_diff, ri);
+	string out_dir("temp/");	
+        fit_SV(R_abs, U, V_diff, S_diff, R_diff);
+	//io::write_nmtf_output(U, V_diff, S_diff, R_abs, reconstruction_err_, reconstruction_slope_, out_dir);
+        
+	/*for(int i=0; i < k2_diff; i++){
+                gsl_vector_view V_k = gsl_matrix_row(V_diff, i);
+                subtract_factors(V, &V_k.vector);
+        }*/
+	utils::concat_matrix_rows( V, V_diff, V_new);
+        utils::concat_matrix_columns( S, S_diff, S_new);
+	//io::write_nmtf_output(U, V_new, S_new, R, reconstruction_err_, reconstruction_slope_, out_dir);
+	
+	v_components = k2;
+        fit(X, U, V_new, S_new, R);
+        //io::write_nmtf_output(U, V_new, S_new, R, reconstruction_err_, reconstruction_slope_, out_dir);
+	gsl_matrix_free(V_diff);
+        gsl_matrix_free(S_diff);
+        gsl_matrix_free(R_diff);
+        gsl_matrix_free(R_abs);
+	return 0;
+}
+
+int NMTF::increase_k1_k2(int k1, int k2, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* U_new, gsl_matrix* V_new, gsl_matrix* S_new, gsl_rng* ri){
+        int nSamples = X->size1;
+        int nComponents = X->size2;
+        int k1_diff = k1 - u_components;
+	int k2_diff = k2 - v_components;
+	
+	u_components = k1_diff;
+	v_components = k2_diff;
+	gsl_matrix* U_diff = gsl_matrix_calloc(k1_diff, nSamples);
+        gsl_matrix* V_diff = gsl_matrix_calloc(k2_diff, nComponents);
+        gsl_matrix* S_diff = gsl_matrix_calloc(k1_diff, k2_diff);
+        gsl_matrix* R_diff = gsl_matrix_calloc(nSamples, nComponents);
+	gsl_matrix* R_abs = gsl_matrix_calloc(nSamples, nComponents);
+	utils::matrix_abs(R, R_abs);
+        
+	init::random(U_diff, ri);
+        init::random(V_diff, ri);
+        init::random(S_diff, ri);
+	
+	//string out_dir("temp/");
+        fit(R_abs, U_diff, V_diff, S_diff, R_diff);
+	//io::write_nmtf_output(U_diff, V_diff, S_diff, R_abs, reconstruction_err_, reconstruction_slope_, out_dir);
+	
+	/*for(int i=0; i < k1_diff; i++){
+		gsl_vector_view U_k = gsl_matrix_row(U_diff, i);
+		subtract_factors(U, &U_k.vector);
+	}*/	
+	utils::concat_matrix_rows(U, U_diff, U_new);
+	
+	/*for(int i=0; i < k2_diff; i++){
+		gsl_vector_view V_k = gsl_matrix_row(V_diff, i);
+		subtract_factors(V, &V_k.vector);
+	}*/
+        utils::concat_matrix_rows(V, V_diff, V_new);
+        
+	utils::concat_matrix_diagonal(S, S_diff, S_new);
+	//io::write_nmtf_output(U_new, V_new, S_new, R, reconstruction_err_, reconstruction_slope_, out_dir);
+	u_components = k1;
+	v_components = k2;
+        fit(X, U_new, V_new, S_new, R);
+	
+	//io::write_nmtf_output(U_new, V_new, S_new, R, reconstruction_err_, reconstruction_slope_, out_dir);
+	gsl_matrix_free(U_diff);
+        gsl_matrix_free(V_diff);
+        gsl_matrix_free(S_diff);
+        gsl_matrix_free(R_diff);
+	gsl_matrix_free(R_abs);
+        return 0;
+}
+
+int NMTF::subtract_factors(gsl_matrix* A, gsl_vector* b){
+	int nFactors = A->size1;
+	int nTerms = A->size2;
+	for(int i=0; i<nFactors; i++){
+		gsl_vector_view a_k = gsl_matrix_row(A, i);
+		gsl_vector_sub(&a_k.vector, b);
+		//inforce non_negativity constraint.
+		for(int j=0; j<nTerms; j++){
+			double *val=&((&a_k.vector)->data[j]);
+			if(*val < 0 ) {
+				*val = 0;
+			}
+		}		
+	}	
+	
+}
+
+int NMTF::reset_k1_k2(int new_k1, int new_k2){
+	u_components = new_k1;
+	v_components = new_k2;
+	return 0;
+}

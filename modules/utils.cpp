@@ -28,3 +28,59 @@ int utils::get_inverse(gsl_matrix* A) {
 	gsl_linalg_cholesky_invert(A);
 	return 0;
 }
+
+int utils::concat_matrix_rows(gsl_matrix* M1, gsl_matrix* M2, gsl_matrix* M_new){
+        gsl_matrix_view m1_view = gsl_matrix_submatrix( M_new, 0, 0, M1->size1, M1->size2);
+        gsl_matrix_view m2_view = gsl_matrix_submatrix( M_new, M1->size1, 0, M2->size1, M2->size2);
+        gsl_matrix_memcpy( &m1_view.matrix, M1);
+        gsl_matrix_memcpy( &m2_view.matrix, M2);
+        return 0;
+}
+
+int utils::concat_matrix_columns( gsl_matrix* M1, gsl_matrix* M2, gsl_matrix* M_new){
+        gsl_matrix_view m1_view = gsl_matrix_submatrix( M_new, 0, 0, M1->size1, M1->size2);
+        gsl_matrix_view m2_view = gsl_matrix_submatrix( M_new, 0, M1->size2, M2->size1, M2->size2);
+        gsl_matrix_memcpy( &m1_view.matrix, M1);
+        gsl_matrix_memcpy( &m2_view.matrix, M2);
+        return 0;
+}
+
+int utils::concat_matrix_diagonal(gsl_matrix* M1, gsl_matrix* M2, gsl_matrix* M_new){
+        gsl_matrix_view m1_view = gsl_matrix_submatrix( M_new, 0, 0, M1->size1, M1->size2);
+        gsl_matrix_view m2_view = gsl_matrix_submatrix( M_new, M1->size1, M1->size2, M2->size1, M2->size2);
+        gsl_matrix_memcpy( &m1_view.matrix, M1);
+        gsl_matrix_memcpy( &m2_view.matrix, M2);
+        return 0;
+}
+
+int utils::matrix_abs(gsl_matrix* M, gsl_matrix* abs_M){
+	gsl_matrix_memcpy(abs_M, M);
+	for(int i=0; i < abs_M->size1; i++){
+		for(int j=0; j < abs_M->size2; j++){
+			abs_M -> data[i * abs_M->tda +j] = fabs( abs_M->data[i * abs_M->tda +j]);
+		}
+	}
+}
+
+int utils::pos_matrix_elements(gsl_matrix* M, gsl_matrix* pos_M){
+	gsl_matrix_memcpy(pos_M, M);
+	for(int i=0; i < pos_M->size1; i++){
+                for(int j=0; j < pos_M->size2; j++){
+			if( pos_M -> data[i * pos_M->tda +j] >=0 ){
+                        	pos_M -> data[i * pos_M->tda +j] = pos_M->data[i * pos_M->tda +j];
+                	}
+		}
+        }
+}
+
+int utils::neg_matrix_elements(gsl_matrix* M, gsl_matrix* neg_M){
+        gsl_matrix_memcpy(neg_M, M);
+        for(int i=0; i < neg_M->size1; i++){
+                for(int j=0; j < neg_M->size2; j++){
+                        if( neg_M -> data[i * neg_M->tda +j] <=0 ){
+                                neg_M -> data[i * neg_M->tda +j] = -neg_M->data[i * neg_M->tda +j];
+                        }
+                }
+        }
+}
+
