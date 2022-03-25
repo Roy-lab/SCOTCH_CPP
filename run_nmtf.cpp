@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
@@ -156,7 +157,7 @@ int main(int argc, char **argv)
 		//See which are completed. 
 		for(int i = 0; i < k1_vec.size(); i++){
 			stringstream out_dir_str;
-			out_dir_str << outputPrefix << "k1_" << k1_vec[i] << "_k2_" << k2_vec[i] << "/";
+			out_dir_str << outputPrefix << "/k1_" << k1_vec[i] << "_k2_" << k2_vec[i] << "/";
 			out_dir=out_dir_str.str();	
 			Ufile.open((out_dir + "U.txt").c_str());
 			Vfile.open((out_dir + "V.txt").c_str());
@@ -175,7 +176,7 @@ int main(int argc, char **argv)
 			prev_k1 = k1_vec[completed];
 			prev_k2 = k2_vec[completed];
 			
-			in_dir_str << outputPrefix << "k1_" << k1_vec[completed] << "_k2_" << k2_vec[completed] << "/";
+			in_dir_str << outputPrefix << "/k1_" << k1_vec[completed] << "_k2_" << k2_vec[completed] << "/";
 			in_dir = in_dir_str.str();
 				
 			gsl_matrix_free(U);
@@ -224,6 +225,11 @@ int main(int argc, char **argv)
 
         		io::write_mem_and_time(out_dir + "usage.txt", et - ft, (eu - bu)/1000);
         		io::write_nmtf_output(U, V, S, R, err, slope, out_dir);
+			string tar_dir = "tar czf " + outputPrefix + ".tgz " + outputPrefix;
+                        system(tar_dir.c_str());
+                        sleep(10);
+
+
 			prev_k1 = k1;
 			prev_k2 = k2;
 			completed = 0;
@@ -240,10 +246,6 @@ int main(int argc, char **argv)
                                 new_k2=k2_vec[i];
                                 err->clear();
                                 slope->clear();
-                                stringstream out_dir_str;
-                                out_dir_str << outputPrefix << "k1_" << new_k1 << "_k2_" << new_k2 << "/";
-                                out_dir=out_dir_str.str();
-                                mkdir(out_dir.c_str(), 0766);
                         }
                         if( new_k1 > prev_k1 && new_k2 > prev_k2){
                                 gsl_matrix* U_new = gsl_matrix_calloc(new_k1, nSamples);
@@ -286,7 +288,7 @@ int main(int argc, char **argv)
                                 prev_k1=k1_vec[j];
                                 prev_k2=k2_vec[j];
                                 stringstream old_dir_str;
-                                old_dir_str << outputPrefix << "k1_" << prev_k1 << "_k2_" << prev_k2 << "/";
+                                old_dir_str << outputPrefix << "/k1_" << prev_k1 << "_k2_" << prev_k2 << "/";
                                 old_dir=old_dir_str.str();
                                 gsl_matrix* U_old = gsl_matrix_calloc(prev_k1, nSamples);
                                 gsl_matrix* V_old = gsl_matrix_calloc(prev_k2, nFeatures);
@@ -304,9 +306,16 @@ int main(int argc, char **argv)
                                 ft = factorTime.tv_sec;
                                 et = endTime.tv_sec;
                                 eu = eUsage.ru_maxrss;
-                                io::write_mem_and_time(out_dir + "usage.txt", (et - ft), (eu - bu)/1000);
+                                stringstream out_dir_str;
+				out_dir_str << outputPrefix << "/k1_" << new_k1 << "_k2_" << new_k2 << "/";
+                                out_dir=out_dir_str.str();
+                                mkdir(out_dir.c_str(), 0766);
+				io::write_mem_and_time(out_dir + "usage.txt", (et - ft), (eu - bu)/1000);
                                 io::write_nmtf_output(U, V, S, R, err, slope, out_dir);
-                                prev_k1=new_k1;
+                                string tar_dir = "tar czf " + outputPrefix + ".tgz " + outputPrefix;
+				system(tar_dir.c_str());
+				sleep(10);
+				prev_k1=new_k1;
                                 prev_k2=new_k2;
                                 i++;
                         }
@@ -323,7 +332,7 @@ int main(int argc, char **argv)
 		nmtf.fit(X, U, V, S, R);
 		mkdir(outputPrefix.c_str(), 0766);
 		stringstream out_dir_str;
-		out_dir_str << outputPrefix << '/' << "k1_" << k1 << "_k2_" << k2 << "/";
+		out_dir_str << outputPrefix << "/k1_" << k1 << "_k2_" << k2 << "/";
 		string out_dir=out_dir_str.str();
 		mkdir(out_dir.c_str(), 0766);
 	

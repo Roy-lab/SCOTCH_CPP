@@ -359,6 +359,25 @@ int NMTF::write_test_files(string s){
 	return 0;
 }
 
+
+int NMTF::initialize_matrices(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris){
+	X = inputmat;
+        n = X->size1;
+        m = X->size2;
+        U = W;
+        V = H;
+        S = D;
+        R = Ris;
+	P = gsl_matrix_alloc(v_components, n);
+        Q = gsl_matrix_alloc(u_components, m);
+	update_P();
+        update_Q();
+	calculate_objective();
+	gsl_matrix_free(P);
+        gsl_matrix_free(Q);
+	return 0;
+}
+
 int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris) {
 	X = inputmat;
 	n = X->size1;
@@ -535,7 +554,8 @@ int NMTF::fit_SV(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix*
 
 
 int NMTF::increase_k1_fixed_k2(int k1, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* U_new, gsl_matrix* S_new, gsl_rng* ri){
-        int nSamples = X->size1;
+	initialize_matrices(X, U, V, S, R);
+	int nSamples = X->size1;
         int nComponents = X->size2;
 	int k1_diff = k1 - u_components;
 	u_components = k1_diff;
@@ -570,7 +590,8 @@ int NMTF::increase_k1_fixed_k2(int k1, gsl_matrix* U, gsl_matrix* V, gsl_matrix*
 }
 
 int NMTF::increase_k2_fixed_k1(int k2, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* V_new, gsl_matrix* S_new, gsl_rng* ri){
-        int nSamples = X->size1;
+	initialize_matrices(X, U, V, S, R);
+	int nSamples = X->size1;
         int nComponents = X->size2;
         int k2_diff=k2 - v_components;
 	v_components=k2_diff;
@@ -605,7 +626,8 @@ int NMTF::increase_k2_fixed_k1(int k2, gsl_matrix* U, gsl_matrix* V, gsl_matrix*
 }
 
 int NMTF::increase_k1_k2(int k1, int k2, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* U_new, gsl_matrix* V_new, gsl_matrix* S_new, gsl_rng* ri){
-        int nSamples = X->size1;
+	initialize_matrices(X, U, V, S, R);
+	int nSamples = X->size1;
         int nComponents = X->size2;
         int k1_diff = k1 - u_components;
 	int k2_diff = k2 - v_components;

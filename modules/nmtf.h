@@ -12,8 +12,9 @@ class NMTF {
 		NMTF(int, int, init_method, int, int, bool, double, list<double>*, list<double>*);
 		NMTF(int, int, init_method, int, int, bool, double, list<double>*, list<double>*, double, double);
 		NMTF(int, int, init_method, int, int, bool, double, list<double>*, list<double>*, double, double, double, double);
-		
+			
 		~NMTF();
+		int initialize_matrices(gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*);
 		int fit_US(gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*);
 		int fit_SV(gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*);
 		int fit(gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*);
