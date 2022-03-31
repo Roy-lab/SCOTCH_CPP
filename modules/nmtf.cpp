@@ -253,9 +253,11 @@ int NMTF::update() {
                         gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
         	}
 	}
-	//Compute P=US
+	//Normalize and scale u v and S. 
+	normalize_and_scale_u();
+	normalize_and_scale_v();
+	//Compute P = US and Q=SV^T
 	update_P();
-	//Compute Q=SV^T
 	update_Q();
 	return 0;
 }
@@ -290,6 +292,8 @@ int NMTF::update_US() {
                         gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
                 }
         }
+	normalize_and_scale_u();
+	normalize_and_scale_v();
         update_P();
         update_Q();
         return 0;
@@ -325,6 +329,8 @@ int NMTF::update_SV() {
                         gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
                 }
         }
+	normalize_and_scale_u();
+	normalize_and_scale_v();
         update_P();
         update_Q();
         return 0;
@@ -350,8 +356,7 @@ int NMTF::update_Q() {
 
 
 int NMTF::normalize_and_scale_u() {
-        //Makes all feature norm length then recomputes the P and Q matrix. (Q computed as well since S
-        // is scaled as well) 
+        //Makes all feature length 1.
 	for (int k1 = 0; k1 < u_components; k1++) {
                 gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
                 gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
@@ -359,15 +364,12 @@ int NMTF::normalize_and_scale_u() {
 		gsl_vector_scale(&u_k1.vector, 1/norm);
                 gsl_vector_scale(&s_k1.vector, norm);
         }
-	update_P();
-        update_Q();
 	return 0;
 }
 
 
 int NMTF::normalize_and_scale_v() {
-	 //Makes all feature norm length then recomputes the P and Q matrix. (Q computed as well since S
-	 //is scaled as well)	
+	 //Makes all feature length 1.	
 	for (int k2 = 0; k2 < v_components; k2++) {
 		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
 		gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
@@ -375,8 +377,6 @@ int NMTF::normalize_and_scale_v() {
 		gsl_vector_scale(&v_k2.vector, 1/norm);
 		gsl_vector_scale(&s_k2.vector, norm);
 	}
-	update_P();
-	update_Q();
 	return 0;
 }
 
@@ -390,7 +390,6 @@ int NMTF::compute_R(){
 }		
 double NMTF::calculate_objective() {
 	//Computes R by First setting to X then subtracting product of P V. P = U S. 
-	compute_R();
 	double error = utils::get_frobenius_norm(R);
 	return error;
 }
@@ -408,7 +407,7 @@ int NMTF::write_test_files(string s){
 }
 
 
-int NMTF::initialize_matrices(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris){
+int NMTF::initialize_matrices(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* O, gsl_matrix* L, gsl_matrix* Ris){
 	// Sets up required matrices (mostly need this to insure that R is computed during iterative learning)
 	X = inputmat;
         n = X->size1;
@@ -416,31 +415,21 @@ int NMTF::initialize_matrices(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H
         U = W;
         V = H;
         S = D;
-        R = Ris;
-	P = gsl_matrix_alloc(v_components, n);
-        Q = gsl_matrix_alloc(u_components, m);
+	P = O;
+        Q = L;
+	R = Ris;
+	normalize_and_scale_u();
+	normalize_and_scale_v();
 	update_P();
         update_Q();
 	//Compute R
 	compute_R();
-	gsl_matrix_free(P);
-        gsl_matrix_free(Q);
 	return 0;
 }
 
-int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris) {
-	X = inputmat;
-	n = X->size1;
-	m = X->size2;
-	U = W;
-	V = H;
-	S = D;
-	// Residual matrix
-	R = Ris;
-	// P = U S
-	P = gsl_matrix_alloc(v_components, n);
-	// Q = S V
-	Q = gsl_matrix_alloc(u_components, m);
+int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* O, gsl_matrix* L, gsl_matrix* Ris) {
+	initialize_matrices(inputmat, W, H, D, O, L, Ris);	
+	
 	reconstruction_err_->clear();
 	reconstruction_slope_->clear();
 	int num_converge = 0;
@@ -449,11 +438,6 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D,
 		cout << "The first dimension of U and V (i.e. their number of rows) should equal the number of components specified when instantiating NMF." << endl;
 		return 1;
 	} 
-	
-	//update_P();
-	//update_Q();
-	normalize_and_scale_u(); //Normalize and scale U 
-	normalize_and_scale_v(); // Normalizt and scale V and compute P Q 
 	//Compute R and find error
 	double old_error = calculate_objective(); 
 	reconstruction_err_->push_back(old_error);
@@ -462,9 +446,6 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D,
 	for (int n_iter =0; n_iter < max_iter; n_iter++){
 		//Update U S V
 		update();
-		//scale U and V
-		normalize_and_scale_u();
-		normalize_and_scale_v();
 		//Compute R and find error.
 		double error = calculate_objective();
 		//Find change in error
@@ -489,25 +470,15 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D,
 			num_converge = 0;
 		}
 	}
-	
-	gsl_matrix_free(P);
-	gsl_matrix_free(Q);
 	return 0;
 }
 
 
-int NMTF::fit_US(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris) {
+int NMTF::fit_US(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* O, gsl_matrix* L, gsl_matrix* Ris){
         // Used in iterate learning when V Does not need to be updated 
-	X = inputmat;
-        n = X->size1;
-        m = X->size2;
-        U = W;
-        V = H;
-        S = D;
-        R = Ris;
-        P = gsl_matrix_alloc(v_components, n);
-        Q = gsl_matrix_alloc(u_components, m);
-        reconstruction_err_->clear();
+        initialize_matrices(inputmat, W, H, D, O, L, Ris); 
+
+	reconstruction_err_->clear();
         reconstruction_slope_->clear();
         int num_converge = 0;
 
@@ -516,18 +487,12 @@ int NMTF::fit_US(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix*
                 return 1;
         }
 
-        //update_P();
-        //update_Q();
-        normalize_and_scale_u();
-        normalize_and_scale_v();
         double old_error = calculate_objective();
         reconstruction_err_->push_back(old_error);
         double old_slope;
 
         for (int n_iter =0; n_iter < max_iter; n_iter++){
                 update_US();
-                normalize_and_scale_u();
-                normalize_and_scale_v();
                 double error = calculate_objective();
                 double slope = (old_error - error)/old_error;
                 reconstruction_err_->push_back(error);
@@ -549,23 +514,14 @@ int NMTF::fit_US(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix*
                         num_converge = 0;
                 }
         }
-        gsl_matrix_free(P);
-        gsl_matrix_free(Q);
         return 0;
 }
 
-int NMTF::fit_SV(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* Ris) {
+int NMTF::fit_SV(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* O, gsl_matrix* L, gsl_matrix* Ris) {
         // Used in iterated learning when U does not need to be updated. 
-	X = inputmat;
-        n = X->size1;
-        m = X->size2;
-        U = W;
-        V = H;
-        S = D;
-        R = Ris;
-        P = gsl_matrix_alloc(v_components, n);
-        Q = gsl_matrix_alloc(u_components, m);
-        reconstruction_err_->clear();
+        initialize_matrices(inputmat, W, H, D, O, L, Ris);
+	
+	reconstruction_err_->clear();
         reconstruction_slope_->clear();
         int num_converge = 0;
 
@@ -574,18 +530,12 @@ int NMTF::fit_SV(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix*
                 return 1;
         }
 
-        //update_P();
-        //update_Q();
-        normalize_and_scale_u();
-	normalize_and_scale_v();
 	double old_error = calculate_objective();
         reconstruction_err_->push_back(old_error);
         double old_slope;
 
         for (int n_iter =0; n_iter < max_iter; n_iter++){
                 update_SV();
-                normalize_and_scale_u();
-                normalize_and_scale_v();
                 double error = calculate_objective();
                 double slope = (old_error - error)/old_error;
                 reconstruction_err_->push_back(error);
@@ -607,8 +557,6 @@ int NMTF::fit_SV(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix*
                         num_converge = 0;
                 }
         }
-        gsl_matrix_free(P);
-        gsl_matrix_free(Q);
         return 0;
 }
 
@@ -616,28 +564,30 @@ int NMTF::fit_SV(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix*
 
 
 
-int NMTF::increase_k1_fixed_k2(int k1, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* U_new, gsl_matrix* S_new, gsl_rng* ri){
+int NMTF::increase_k1_fixed_k2(int k1, gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* O, gsl_matrix* L, gsl_matrix* Ris, gsl_matrix* U_new, gsl_matrix* S_new, gsl_matrix* P_new, gsl_matrix* Q_new, gsl_rng* ri){
 	//Iterated learning when k1 increases but k2 is fixed. Insure R is initialized correctly
-	initialize_matrices(X, U, V, S, R); 
-	int nSamples = X->size1;
-        int nComponents = X->size2;
+	initialize_matrices(inputmat, W, H, D, O, L, Ris); 
 	//Number of factors to learn 
 	int k1_diff = k1 - u_components;
-	u_components = k1_diff;
-	//Initialize New matrices 
-        gsl_matrix *U_diff = gsl_matrix_calloc(k1_diff, nSamples);
-        gsl_matrix *S_diff = gsl_matrix_calloc(k1_diff, V->size1);
-        gsl_matrix *R_diff = gsl_matrix_calloc(nSamples, nComponents);
-	gsl_matrix* R_abs = gsl_matrix_calloc(nSamples, nComponents);
-        //Inforce positivity
+	//Initialize New matrices for partial learning on old Residual
+        gsl_matrix *U_diff = gsl_matrix_calloc(k1_diff, n);
+        gsl_matrix *P_diff = gsl_matrix_calloc(v_components, n);
+	gsl_matrix *Q_diff = gsl_matrix_calloc(k1_diff, m);
+	gsl_matrix *S_diff = gsl_matrix_calloc(k1_diff, v_components);
+        //R_diff is used to store residual when running subNMTF problem.
+	gsl_matrix *R_diff = gsl_matrix_calloc(n, m);
+	gsl_matrix* R_abs = gsl_matrix_calloc(n, m);
+	//Inforce positivity in R_abs matrix that will be used as the new data to fit. 
 	utils::matrix_abs(R, R_abs);
 	
         init::random(U_diff, ri);
         init::random(S_diff, ri);
 	string out_dir("temp/");
+
 	//Fit U_diff V S_diff to R_abs;
+	NMTF subNMTF=NMTF(k1_diff, v_components, init, max_iter, random_state, verbose, tol, reconstruction_err_, reconstruction_slope_, alphaU, lambdaU, alphaV, lambdaV);
 	//Here we are trying to find components that capture features not captured by U V S	
-        fit_US(R_abs, U_diff, V, S_diff, R_diff);
+        subNMTF.fit_US(R_abs, U_diff, V, S_diff, P_diff, Q_diff, R_diff);
 
 	// The following was used to remove new factors from old factors. 
 	//io::write_nmtf_output(U_diff, V, S_diff, R_abs, reconstruction_err_, reconstruction_slope_, out_dir);
@@ -655,32 +605,34 @@ int NMTF::increase_k1_fixed_k2(int k1, gsl_matrix* U, gsl_matrix* V, gsl_matrix*
 	
 	//Use new matrices to fit original data. 
 	u_components = k1;
-        fit(X, U_new, V, S_new, R);
+        fit(X, U_new, V, S_new,P_new, Q_new, R);
 	//io::write_nmtf_output(U_new, V, S_new, R, reconstruction_err_, reconstruction_slope_, out_dir);
         gsl_matrix_free(U_diff);
+	gsl_matrix_free(P_diff);
+	gsl_matrix_free(Q_diff);
         gsl_matrix_free(S_diff);
         gsl_matrix_free(R_diff);
-        gsl_matrix_free(R_abs);
+	gsl_matrix_free(R_abs);
 	return 0;
 }
 
-int NMTF::increase_k2_fixed_k1(int k2, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* V_new, gsl_matrix* S_new, gsl_rng* ri){
+int NMTF::increase_k2_fixed_k1(int k2, gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* O, gsl_matrix* L, gsl_matrix* Ris, gsl_matrix* V_new, gsl_matrix* S_new, gsl_matrix* P_new, gsl_matrix* Q_new, gsl_rng* ri){
 	//Iterated learning when k2 increases and k1 is fixed. Same as above. 
-	initialize_matrices(X, U, V, S, R);
-	int nSamples = X->size1;
-        int nComponents = X->size2;
+	initialize_matrices(inputmat, W, H, D, O, L, Ris);
         int k2_diff=k2 - v_components;
-	v_components=k2_diff;
-	gsl_matrix *V_diff = gsl_matrix_calloc(k2_diff, nComponents);
-        gsl_matrix *S_diff = gsl_matrix_calloc(U->size1, k2_diff);
-        gsl_matrix *R_diff = gsl_matrix_calloc(nSamples, nComponents);
-	gsl_matrix* R_abs = gsl_matrix_calloc(nSamples, nComponents);
+	gsl_matrix *V_diff = gsl_matrix_calloc(k2_diff, m);
+        gsl_matrix *P_diff = gsl_matrix_calloc(k2_diff, n);
+        gsl_matrix *Q_diff = gsl_matrix_calloc(u_components, m);
+	gsl_matrix *S_diff = gsl_matrix_calloc(u_components, k2_diff);
+        gsl_matrix *R_diff = gsl_matrix_calloc(n, m);
+	gsl_matrix* R_abs = gsl_matrix_calloc(n, m);
         utils::matrix_abs(R, R_abs);
 	
         init::random(V_diff, ri);
         init::random(S_diff, ri);
 	string out_dir("temp/");	
-        fit_SV(R_abs, U, V_diff, S_diff, R_diff);
+       	NMTF subNMTF=NMTF(u_components, k2_diff, init, max_iter, random_state, verbose, tol, reconstruction_err_, reconstruction_slope_, alphaU, lambdaU, alphaV, lambdaV);
+	subNMTF.fit_SV(R_abs, U, V_diff, S_diff, P_diff, Q_diff, R_diff);
 
 	// The following was used to remove new factors from old factors 
 	//io::write_nmtf_output(U, V_diff, S_diff, R_abs, reconstruction_err_, reconstruction_slope_, out_dir);
@@ -697,31 +649,32 @@ int NMTF::increase_k2_fixed_k1(int k2, gsl_matrix* U, gsl_matrix* V, gsl_matrix*
 	
 	//Fit new matrices to orgianal data. 
 	v_components = k2;
-	fit(X, U, V_new, S_new, R);
+	fit(X, U, V_new, S_new, P_new, Q_new, R);
         //io::write_nmtf_output(U, V_new, S_new, R, reconstruction_err_, reconstruction_slope_, out_dir);
 	gsl_matrix_free(V_diff);
         gsl_matrix_free(S_diff);
-        gsl_matrix_free(R_diff);
+        gsl_matrix_free(P_diff);
+        gsl_matrix_free(Q_diff);
+	gsl_matrix_free(R_diff);
         gsl_matrix_free(R_abs);
 	return 0;
 }
 
-int NMTF::increase_k1_k2(int k1, int k2, gsl_matrix* U, gsl_matrix* V, gsl_matrix* S, gsl_matrix* R, gsl_matrix* X, gsl_matrix* U_new, gsl_matrix* V_new, gsl_matrix* S_new, gsl_rng* ri){
+int NMTF::increase_k1_k2(int k1, int k2, gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* O, gsl_matrix* L, gsl_matrix* Ris, gsl_matrix* U_new, gsl_matrix* V_new, gsl_matrix* S_new, gsl_matrix* P_new, gsl_matrix* Q_new, gsl_rng* ri){
 	//Used when both k1 and k2 incerases 
-	initialize_matrices(X, U, V, S, R);
-	int nSamples = X->size1;
-        int nComponents = X->size2;
-        int k1_diff = k1 - u_components;
+        initialize_matrices(inputmat, W, H, D, O, L, Ris);
+	
+	int k1_diff = k1 - u_components;
 	int k2_diff = k2 - v_components;
 	
 	//initialize all matrices: Here we have U_diff, V_diff, and S_diff
-	u_components = k1_diff;
-	v_components = k2_diff;
-	gsl_matrix* U_diff = gsl_matrix_calloc(k1_diff, nSamples);
-        gsl_matrix* V_diff = gsl_matrix_calloc(k2_diff, nComponents);
-        gsl_matrix* S_diff = gsl_matrix_calloc(k1_diff, k2_diff);
-        gsl_matrix* R_diff = gsl_matrix_calloc(nSamples, nComponents);
-	gsl_matrix* R_abs = gsl_matrix_calloc(nSamples, nComponents);
+	gsl_matrix* U_diff = gsl_matrix_calloc(k1_diff, n);
+        gsl_matrix* V_diff = gsl_matrix_calloc(k2_diff, m);
+        gsl_matrix *P_diff = gsl_matrix_calloc(k2_diff, n);
+        gsl_matrix *Q_diff = gsl_matrix_calloc(k1_diff, m);
+	gsl_matrix* S_diff = gsl_matrix_calloc(k1_diff, k2_diff);
+        gsl_matrix* R_diff = gsl_matrix_calloc(n, m);
+	gsl_matrix* R_abs = gsl_matrix_calloc(n, m);;
 	utils::matrix_abs(R, R_abs);
         
 	init::random(U_diff, ri);
@@ -729,7 +682,8 @@ int NMTF::increase_k1_k2(int k1, int k2, gsl_matrix* U, gsl_matrix* V, gsl_matri
         init::random(S_diff, ri);
 	
 	//Fit U_diff, V_diff, S_diff to old matrices 	
-        fit(R_abs, U_diff, V_diff, S_diff, R_diff);
+        NMTF subNMTF=NMTF(k1_diff, k2_diff, init, max_iter, random_state, verbose, tol, reconstruction_err_, reconstruction_slope_, alphaU, lambdaU, alphaV, lambdaV);
+	subNMTF.fit(R_abs, U_diff, V_diff, S_diff, P_diff, Q_diff, R_diff);
 
 	// Used to remove learned factors from old factors
 	//io::write_nmtf_output(U_diff, V_diff, S_diff, R_abs, reconstruction_err_, reconstruction_slope_, out_dir);
@@ -753,7 +707,7 @@ int NMTF::increase_k1_k2(int k1, int k2, gsl_matrix* U, gsl_matrix* V, gsl_matri
 	v_components = k2;
 
 	//Refitt new matrices to original matrices
-        fit(X, U_new, V_new, S_new, R);
+        fit(X, U_new, V_new, S_new, P_new, Q_new, R);
 	
 	//io::write_nmtf_output(U_new, V_new, S_new, R, reconstruction_err_, reconstruction_slope_, out_dir);
 	gsl_matrix_free(U_diff);
