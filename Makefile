@@ -7,7 +7,7 @@ XX = g++
 CC = gcc
 
 #compiler flags
-CFLAGS = -g
+CFLAGS = -g -std=c++11
 GSLFLAGS = -lgsl -lgslcblas
 
 #subset of files

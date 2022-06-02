@@ -38,21 +38,26 @@ int main(int argc, char **argv)
 	
 	string outputPrefix = string("");
 	string k_file=string("");
+	string inPrefix = string("");
 	bool multK=false;
 	int seed = 1010;
 	int verbose = true;
-	int maxIter = 300;
-	double tol = 1e-5;
+	//int maxIter = 300;
+	int maxIter = 100;
+	//double tol = 1e-5;
+	double tol = 1e-10;
 	double alphaU = 0;
 	double lambdaU = 0;
 	double alphaV = 0;
 	double lambdaV = 0;
+	//This the type of update algo we will use
+	int algotype=0;
 	list<double> *err= new list<double>;
 	list<double> *slope = new list<double>;
 	string usage = string("usage_nmtf.txt");
 
 	int c;
-	while((c = getopt(argc, argv, "o:r:s:m:t:a:l:b:k:h:i:")) != -1)
+	while((c = getopt(argc, argv, "o:r:s:m:t:a:l:b:k:h:i:u:p:")) != -1)
 		switch (c) {
 			case 'o':
 				outputPrefix = string(optarg);
@@ -88,6 +93,12 @@ int main(int argc, char **argv)
 			case 'h':
 				io::print_usage(usage);
 				return 0;
+			case 'u':
+				algotype=atoi(optarg);
+				break;
+			case 'p':
+				inPrefix = string(optarg);
+				break;
 			case '?':
 				io::print_usage(usage);
 				return 0;
@@ -161,7 +172,7 @@ int main(int argc, char **argv)
 		ifstream Vfile;
 		ifstream Sfile;
 		NMTF nmtf = NMTF(k1, k2, random_init,  maxIter, seed, verbose, tol, err, slope, alphaU, lambdaU, alphaV, lambdaV);
-		
+		nmtf.setAlgotype(algotype);
 		//See which are completed. 
 		for(int i = 0; i < k1_vec.size(); i++){
 			stringstream out_dir_str;
@@ -209,9 +220,15 @@ int main(int argc, char **argv)
 		}else{
 			//Do dry start 
         		//randomly initialize U V S
-			init::random(U, ri);
-        		init::random(V, ri);
-        		init::random(S, ri);
+        		
+			if(inPrefix == ""){
+				init::random(U, ri);
+        			init::random(V, ri);
+        			init::random(S, ri);
+			}else{
+				io::read_prev_results(inPrefix, U, V, S);
+			}
+				
 
         		gettimeofday(&factorTime, NULL);
 			
@@ -232,6 +249,7 @@ int main(int argc, char **argv)
         		et = endTime.tv_sec;
 
        			cout << "Total time elapsed: " << et - bt << " seconds" << endl;
+       			cout << "Total time for factorization : " << et - ft << " seconds" << endl;
 
         		bu = bUsage.ru_maxrss;
         		unsigned long int eu = eUsage.ru_maxrss;
@@ -373,11 +391,16 @@ int main(int argc, char **argv)
 		}
 	}else{	
 		// This is for single use. We fit the matrix.
-		init::random(U, ri);
-		init::random(V, ri);
-		init::random(S, ri);
+		if(inPrefix == ""){
+			init::random(U, ri);
+			init::random(V, ri);
+			init::random(S, ri);
+		}else{
+			io::read_prev_results(inPrefix, U, V, S);
+		}
 
 		NMTF nmtf = NMTF(k1, k2, random_init,  maxIter, seed, verbose, tol, err, slope, alphaU, lambdaU, alphaV, lambdaV);
+		nmtf.setAlgotype(algotype);
 		gettimeofday(&factorTime, NULL);
 	
 		nmtf.fit(X, U, V, S, P, Q, R);

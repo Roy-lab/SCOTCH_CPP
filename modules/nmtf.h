@@ -23,6 +23,7 @@ class NMTF {
 		int increase_k1_k2(int, int, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_matrix*, gsl_rng*);
 		int compute_R();
 		int reset_k1_k2(int, int);
+		int setAlgotype(int);
 		int u_components;
 		int v_components;
 		int n;
@@ -49,14 +50,19 @@ class NMTF {
 		gsl_matrix* P;
 		gsl_matrix* Q;
 		
+		int algotype;
 		int update_P();
 		int update_Q();
 		int update_kth_block_of_U(int);
 		int update_kth_block_of_V(int);
 		int update_ith_jth_of_S(int, int);
+		int update_kth_block_of_S(int);
 		int update_US();
 		int update_SV();
 		int update();
+		int update_viaSBlock();
+		//SR editted
+		int update_ijblock();
 		int normalize_and_scale_u();
 		int normalize_and_scale_v();
 		int write_test_files(string);

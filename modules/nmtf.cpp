@@ -1,6 +1,8 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_vector.h>
+#include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
+#include <sys/time.h>
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -26,6 +28,7 @@ NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, doub
         alphaV = 0;
         lambdaV = 0;
 	test=0;
+	algotype=0;
 }
 
 NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, list<double> *slope){
@@ -198,9 +201,60 @@ int NMTF::update_ith_jth_of_S(int k1, int k2){
 	if (*s_k1_k2 < 0) {
 		*s_k1_k2 = 0;
 	}
+	
 	gsl_vector_free(temp);
 	return 0; 		
 }
+
+int NMTF::update_kth_block_of_S(int k){
+	//Using Sushmita Roy's update equations for the ith block of S. 
+	//We will need to compute the inverse of (V^T V), which is a k2 x k2 matrix. 
+	//R_i = X - sum(C ne i) u_c s_.c V^T \\ this is the rank1 update in question. 
+	//R_i = R + u_i s_.i V^T
+	//Update Equation s_i = u_k^T R_k V(V^T V)^(-1)/(u_k^T u_k)
+	
+	//Initialize temp matrices
+	gsl_vector_view u_k = gsl_matrix_row(U, k);
+	gsl_vector_view s_k = gsl_matrix_row(S, k);
+	gsl_matrix* VTV = gsl_matrix_calloc(v_components, v_components);
+	gsl_matrix* V_VTV_inv = gsl_matrix_calloc(v_components, m);
+	gsl_matrix* R_V_VTV_inv = gsl_matrix_calloc(v_components, n);
+	
+	//Compute V^T V
+	//io::write_dense_matrix("test/V.txt", V);
+	gsl_blas_dsyrk(CblasLower, CblasNoTrans, 1, V, 0, VTV);
+	//io::write_dense_matrix("test/VTV.txt", VTV);
+	//Compute (V^T V)^(inv)
+	gsl_linalg_cholesky_decomp(VTV);
+	gsl_linalg_cholesky_invert(VTV);
+	//io::write_dense_matrix("test/VTV_inv.txt", VTV);
+	//Compute V (V^T V)^(inv)
+	gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1, VTV, V, 0, V_VTV_inv);
+	//Compute R_k V (V^T V) ^(inv)
+	gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1, V_VTV_inv, R, 0, R_V_VTV_inv);
+	//io::write_dense_matrix("test/R_V_VTV_inv.txt", R_V_VTV_inv);
+	double u_norm=pow(gsl_blas_dnrm2(&u_k.vector), 2);
+	gsl_blas_dgemv(CblasNoTrans, u_norm, R_V_VTV_inv, &u_k.vector, 0, &s_k.vector);
+	//io::write_dense_matrix("test/S.txt", S); 
+	
+	//Inforce Positivity 
+	for (int i = 0; i < v_components; i++) {
+                double *val = &((&s_k.vector)->data[i]);
+                if (*val < 0) {
+                        *val = 0;
+                }
+        }
+	
+	if (gsl_vector_isnull(&s_k.vector)){
+		gsl_vector_set_all(&s_k.vector, 1/double(v_components));
+	}
+
+	gsl_matrix_free(VTV);
+	gsl_matrix_free(V_VTV_inv);
+	gsl_matrix_free(R_V_VTV_inv); 
+	return 0;	 	 
+}
+
 
 int NMTF::update() {
 	for (int k1 = 0; k1 < u_components; k1++) {
@@ -262,6 +316,119 @@ int NMTF::update() {
 	return 0;
 }
 
+//SR is trying this other code version where we update the  ij block together like for the S matrix.
+int NMTF::update_ijblock() {
+	
+	//Initialize tracking variables. 
+	//bool trained_u[u_components];
+	//for(int k1 = 0; k1 < u_components; k1++){
+	//	trained_u[k1] = 0;
+	//}
+	//bool trained_v[v_components];
+	//for(int k2 = 0; k2 < v_components; k2++){
+	//	trained_v[k2] = 0;
+	//}
+	
+	
+	// RUN UPDATE 
+	for(int k1 = 0; k1 < u_components; k1++){
+		for(int k2 = 0; k2 < v_components; k2++){
+			double* s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
+			gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+			gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+			gsl_vector_view q_k1 = gsl_matrix_row(Q, k1);
+		
+			// Update U 
+			gsl_blas_dger(1, &u_k1.vector, &q_k1.vector, R);
+			update_kth_block_of_U(k1);
+			update_P();
+			gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
+			
+			gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
+			//Update V
+			gsl_blas_dger(1, &p_k2.vector, &v_k2.vector, R);
+			update_kth_block_of_V(k2);
+			update_Q();
+                        gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);	
+
+			//Update S
+			gsl_blas_dger( *s_k1_k2, &u_k1.vector, &v_k2.vector, R);
+			update_ith_jth_of_S(k1, k2); 	
+			update_P();
+			update_Q();
+		
+			//Make R
+			gsl_blas_dger(-1*(*s_k1_k2), &u_k1.vector, &v_k2.vector, R);
+		}
+		//Check that all rows are nonzero. 
+		gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
+	 	if (gsl_vector_isnull(&s_k1.vector)) {
+                	gsl_vector_set_all(&s_k1.vector, 1/double(u_components));
+        	}
+		normalize_and_scale_u();
+        	normalize_and_scale_v();
+	}
+	for (int k2 = 0; k2 < v_components; k2++){
+		//Check that all columns are nonzero
+		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);	
+		if (gsl_vector_isnull(&s_k2.vector)) {
+                        gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
+        	}
+	}
+	//Normalize and scale u v and S. 
+	normalize_and_scale_u();
+	normalize_and_scale_v();
+	//Compute P = US and Q=SV^T
+	update_P();
+	update_Q();
+	return 0;
+}
+
+//Used to update with block S
+int NMTF::update_viaSBlock(){
+	//Update Via the S_kth row update equations that SR generated (see update_kth_block_of_S function for details).
+	
+	//Start with update of V. It is best to update V and S before the correspounding S because the update of S 
+	//is sensitive to bad V and S. 
+	for(int k2 = 0; k2 < v_components; k2++){
+		gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+		gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
+		gsl_blas_dger( 1, &p_k2.vector, &v_k2.vector, R);
+		update_kth_block_of_V(k2);
+		gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
+	}
+	//Recompute the Q matrix using the new V matrix
+	update_P();
+	update_Q();
+	
+	//Compute U and S. Note that since S changes Q will change. This will need to be recomputed to get correct 
+	//partial residual R_i 
+	for(int k1 = 0; k1 < u_components; k1++){
+		gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+		gsl_vector_view q_k1 = gsl_matrix_row(Q, k1);
+		gsl_blas_dger( 1, &u_k1.vector, &q_k1.vector, R);
+		update_kth_block_of_U(k1);
+		update_kth_block_of_S(k1);
+		//update_Q();	      		//Need because S changes. 
+		gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);			
+	}
+
+	for (int k2 = 0; k2 < v_components; k2++){
+		gsl_vector_view s_k2 = gsl_matrix_column(S,  k2);
+		if (gsl_vector_isnull(&s_k2.vector)){
+			gsl_vector_set_all(&s_k2.vector, 1/double(u_components));
+		} 
+	}
+	
+	normalize_and_scale_u();
+	normalize_and_scale_v();
+	update_P();
+	update_Q();
+	write_test_files("");
+	return 0; 
+}
+
+
 int NMTF::update_US() {
        	//Same as above but ignores the V component. Used in iterated learning when k2_new = k2_old 
 	for (int k1 = 0; k1 < u_components; k1++) {
@@ -283,13 +450,13 @@ int NMTF::update_US() {
                 }
                 gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
                 if (gsl_vector_isnull(&s_k1.vector)) {
-                        gsl_vector_set_all(&s_k1.vector, 1/double(u_components));
+                        gsl_vector_set_all(&s_k1.vector, 1/double(v_components));
                 }
         }
         for (int k2 = 0; k2 < v_components; k2++){
                 gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
                 if (gsl_vector_isnull(&s_k2.vector)) {
-                        gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
+                        gsl_vector_set_all(&s_k2.vector, 1/double(u_components));
                 }
         }
 	normalize_and_scale_u();
@@ -397,7 +564,7 @@ double NMTF::calculate_objective() {
 int NMTF::write_test_files(string s){
 	//Writes all matrices. 
 	stringstream ss;
-	ss << "test/" << test;
+	ss << "test/";
 	io::write_dense_matrix(ss.str() + s + "U.txt", U);
         io::write_dense_matrix(ss.str() + s + "V.txt", V);
         io::write_dense_matrix(ss.str() + s + "S.txt", S);
@@ -429,7 +596,7 @@ int NMTF::initialize_matrices(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H
 
 int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, gsl_matrix* O, gsl_matrix* L, gsl_matrix* Ris) {
 	initialize_matrices(inputmat, W, H, D, O, L, Ris);	
-	
+ 	write_test_files("0");	
 	reconstruction_err_->clear();
 	reconstruction_slope_->clear();
 	int num_converge = 0;
@@ -442,10 +609,34 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D,
 	double old_error = calculate_objective(); 
 	reconstruction_err_->push_back(old_error);
 	double old_slope;
-	
+	struct timeval begTime;
+	struct timeval endTime;
+	unsigned long int bt;
+	unsigned long int et;
 	for (int n_iter =0; n_iter < max_iter; n_iter++){
 		//Update U S V
-		update();
+        	gettimeofday(&begTime, NULL);
+		if(algotype==0)
+		{
+			update();
+		}
+		else if(algotype==1)
+		{
+			update_ijblock(); 
+		}
+		else if(algotype==2){
+			update_viaSBlock();
+		}
+		else{
+			cout<<"Unknown algo type" << endl;
+			exit(0);
+		}
+        	gettimeofday(&endTime, NULL);
+		bt=begTime.tv_sec;
+		et=endTime.tv_sec;
+		cout <<"algotype"<<algotype<<" iter:" << n_iter <<" time: "<<  et-bt << "secs " << endl;
+		string n_iter_string = to_string(n_iter + 1);
+		write_test_files(n_iter_string);
 		//Compute R and find error.
 		double error = calculate_objective();
 		//Find change in error
@@ -740,5 +931,11 @@ int NMTF::reset_k1_k2(int new_k1, int new_k2){
 	//Used to change k1 and k2 for an NMTF object. Used in iterative learning
 	u_components = new_k1;
 	v_components = new_k2;
+	return 0;
+}
+
+int
+NMTF::setAlgotype(int val){
+	algotype=val;
 	return 0;
 }
