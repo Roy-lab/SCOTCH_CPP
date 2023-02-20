@@ -554,7 +554,9 @@ int NMTF::compute_R(){
 	// Sets R = X - U S V^T 
 	gsl_blas_dgemm(CblasTrans, CblasNoTrans, -1, P, V, 1, R);
 	return 0;
-}		
+}
+
+		
 double NMTF::calculate_objective() {
 	//Computes R by First setting to X then subtracting product of P V. P = U S. 
 	double error = pow(utils::get_frobenius_norm(R), 2);
@@ -562,11 +564,12 @@ double NMTF::calculate_objective() {
 	//Compute lU component
 	double lu_reg = 0;
 	if(lambdaU > 0) {
-		gsl_matrix* U_overlap = gsl_matrix_calloc(k1, k1);
-		U_overlap = gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1, &U, 0, U_overlap);
+		gsl_matrix* U_overlap = gsl_matrix_calloc(u_components, u_components);
+		gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1, U, 0, U_overlap);
 		gsl_vector_view diag = gsl_matrix_diagonal(U_overlap);
 		gsl_vector_set_zero(&diag.vector);
-	 	lu_reg = lambdaU * gsl_matrix_norm1(U_overlap): //do not need to devide by 2 becuase U_overlap is upper diagonal with zero on diag.		 
+	 	lu_reg = lambdaU * utils::get_sum_vector_one_norm(U_overlap); //do not need to devide by 2 becuase U_overlap is upper diagonal with zero on diag.
+	 	gsl_matrix_free(U_overlap);
 	}else{
 		lu_reg = 0;
 	}
@@ -574,11 +577,12 @@ double NMTF::calculate_objective() {
 	//Compute LV component
 	double lv_reg = 0;
 	if(lambdaV > 0) {
-		gsl_matrix* V_overlap = gsl_matrix_calloc(k2, k2);
-		V_overlap = gsl_blas_dsyrk(CBlasUpper, CblasNoTrans, 1, &V, 0, V_overlap);
+		gsl_matrix* V_overlap = gsl_matrix_calloc(v_components, v_components);
+		gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1, V, 0, V_overlap);
 		gsl_vector_view diag = gsl_matrix_diagonal(V_overlap);
 		gsl_vector_set_zero(&diag.vector);
-		lv_reg = lambdaV * gsl_matrix_norm1(V_overlap); //do not need to devide by 2 because V_overlap is upper diagonal with zero on diag. 
+		lv_reg = lambdaV * utils::get_sum_vector_one_norm(V_overlap); //do not need to devide by 2 because V_overlap is upper diagonal with zero on diag.
+		gsl_matrix_free(V_overlap);
 	}else{
 		lv_reg = 0;
 	}
@@ -587,7 +591,7 @@ double NMTF::calculate_objective() {
 	//Compute aU component 
 	double au_reg = 0;
 	if(alphaU > 0){
-		au_reg = alphaU / 2 * gsl_matrix_norm1(U);
+		au_reg = alphaU / 2 * utils::get_sum_vector_one_norm(U);
 	}else{
 		au_reg = 0;
 	}
@@ -595,9 +599,9 @@ double NMTF::calculate_objective() {
 	//Compute aV component 
 	double av_reg = 0;
 	if(alphaV > 0){
-		av_reg = alphaV / 2 *gsl_matrix_norm1(V);
+		av_reg = alphaV / 2 * utils::get_sum_vector_one_norm(V);
 	}else{
-		av_reg = 0'
+		av_reg = 0;
 	}
 
 	error = error + lu_reg + lv_reg + au_reg + av_reg;			

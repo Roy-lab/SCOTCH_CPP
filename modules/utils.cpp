@@ -23,6 +23,19 @@ double utils::get_frobenius_norm(gsl_matrix* X) {
 	return sum;
 }
 
+double utils::get_sum_vector_one_norm(gsl_matrix* X) {
+	int n = X-> size1;
+	int m = X-> size2;
+	double sum = 0;
+	for (int i = 0; i < n; i ++) {
+		gsl_vector_view row  = gsl_matrix_row(X, i);
+		sum += gsl_blas_dasum(&row.vector); 
+	}
+	return sum;
+}
+	
+
+
 int utils::get_inverse(gsl_matrix* A) {
 	gsl_linalg_cholesky_decomp1(A);
 	gsl_linalg_cholesky_invert(A);
