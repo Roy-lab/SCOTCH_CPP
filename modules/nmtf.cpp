@@ -557,7 +557,50 @@ int NMTF::compute_R(){
 }		
 double NMTF::calculate_objective() {
 	//Computes R by First setting to X then subtracting product of P V. P = U S. 
-	double error = utils::get_frobenius_norm(R);
+	double error = pow(utils::get_frobenius_norm(R), 2);
+	
+	//Compute lU component
+	double lu_reg = 0;
+	if(lambdaU > 0) {
+		gsl_matrix* U_overlap = gsl_matrix_calloc(k1, k1);
+		U_overlap = gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1, &U, 0, U_overlap);
+		gsl_vector_view diag = gsl_matrix_diagonal(U_overlap);
+		gsl_vector_set_zero(&diag.vector);
+	 	lu_reg = lambdaU * gsl_matrix_norm1(U_overlap): //do not need to devide by 2 becuase U_overlap is upper diagonal with zero on diag.		 
+	}else{
+		lu_reg = 0;
+	}
+	
+	//Compute LV component
+	double lv_reg = 0;
+	if(lambdaV > 0) {
+		gsl_matrix* V_overlap = gsl_matrix_calloc(k2, k2);
+		V_overlap = gsl_blas_dsyrk(CBlasUpper, CblasNoTrans, 1, &V, 0, V_overlap);
+		gsl_vector_view diag = gsl_matrix_diagonal(V_overlap);
+		gsl_vector_set_zero(&diag.vector);
+		lv_reg = lambdaV * gsl_matrix_norm1(V_overlap); //do not need to devide by 2 because V_overlap is upper diagonal with zero on diag. 
+	}else{
+		lv_reg = 0;
+	}
+
+
+	//Compute aU component 
+	double au_reg = 0;
+	if(alphaU > 0){
+		au_reg = alphaU / 2 * gsl_matrix_norm1(U);
+	}else{
+		au_reg = 0;
+	}
+
+	//Compute aV component 
+	double av_reg = 0;
+	if(alphaV > 0){
+		av_reg = alphaV / 2 *gsl_matrix_norm1(V);
+	}else{
+		av_reg = 0'
+	}
+
+	error = error + lu_reg + lv_reg + au_reg + av_reg;			
 	return error;
 }
 
