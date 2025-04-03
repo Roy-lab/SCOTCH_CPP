@@ -1,99 +1,39 @@
-### Tree-guided multi-task matrix factorization in C++
+# SCOTCH in C++
 
-- [Installation instruction](#step-1-install)
-- [Basic usage](#basic-usage)
-- [Input file formats](#input-tree-file-format)
-- [Parameters](#parameters)
-- [Program outputs](#output-files)
-
-### \[Step 1\] Install 
-
-Installation instructions below were tested in Linux Centos 7 distribution. [GSL (GNU Scientific Library) 2.6](https://www.gnu.org/software/gsl/doc/html/index.html) is used to handle matrix- and vector-related operations. For matrix inversion, one of the newer functions in GSL 2.6 is used, so the code may not run if you have an older GSL.
-
-1. __If you already have GSL 2.6 installed__, edit the first few lines of the Makefile to point to the correct include and shared library directory, then jump to step 3.
-```
-#CHANGE PATHS AS NEEDED:
-INCLUDE_PATH = ${CONDA_PREFIX}/include
-LIBRARY_PATH = ${CONDA_PREFIX}/lib
-```
-2. __If you do not have GSL 2.6 installed, or you are not sure__, one way to get it installed is to use [conda](https://anaconda.org/conda-forge/gsl/):
-```
-conda install -c conda-forge gsl
-```
-3. Make sure to add the location of the installed shared library to where the compiler/linker will be looking. If you used conda to install GSL to the default location in step 2, run the following command after activating the correct environment, or add the appropriate path if you already have GSL installed:
-```
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib
-```
-4. And let's install! In the same directory you downloaded the code/Makefile (either by cloning the repository or by downloading a release), run:
-```
-make run_tmf
-```
-5. If all went well, you won't get any alarming messages, and you will see an executable named `run_tmf` created in the same directory. A quick test below will print the manual (UNDER CONSTRUCTION):
-```
-./run_tmf -h
-```
-
-Note: in order to implement NNDSVD initialization of factors, a fast randomized SVD algorithm from [RSVDPACK](https://github.com/sergeyvoronin/LowRankMatrixDecompositionCodes) was used. A minor modification to allow random seed specification was made to the original code from [RSVDPACK](https://github.com/sergeyvoronin/LowRankMatrixDecompositionCodes/tree/master/single_core_gsl_code). This updated code is included under modules/random_svd directory. Compilation of this code is part of the included Makefile; no additional step is necessary for installation.
-
-### \[Step 2\] Run
-
-#### Basic usage
-See [Parameters](#parameters) for more details.
-```
-./run_tmf input/toy_tree.txt 120 2 -o output/ -a 10 -l 200
-```
-- `input/toy_tree.txt` specifies the tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmf executable location). 
-- `120` is the number of features/columns in each task matrix, which has to be be the same across all tasks. 
-- `2` = k, the smaller dimensions of U and V. 
--	[Optional] `-o output/` will put all output files to output/ directory. Check out the example output directory in the repo. By default output will be saved to current directory.
--	[Optional] `-a 10` will set the alpha (strength of regularization to parent node) to be 10. Default is alpha = 10.
-- [Optional] `-l 200` will set lambda (strength of sparsity constraint) to be 200. By default there is no sparsity constraint, i.e., lambda = 0.
-
-#### Input tree file format
-See example in input/toy_tree.txt.
-```
-1 3 A input/toy/A.txt 95
-2 3 B input/toy/B.txt 80
-3 -1 root N/A N/A
-```
-- Column 1: **node ID**; start from 1 and move up.
-- Column 2: **parent node ID**; right now the implementation will only work correctly if you ID all children nodes before a parent node (so start from the lowest depth of tree, move to next level, till you hit the root, which should be the last node ID.)
-- Column 3: **node alias**, used as prefix to U and V output files.
-- Column 4: **location of input matrix file for leaf nodes**, relative to where the `run_tmf` executable is. Set as N/A for non-leaf nodes.
-- Column 5: **number of rows/data points in each input matrix**. Set as N/A for non-leaf nodes.
-
-#### Input matrix format
-- Tab-delimited "dense" matrix text files.
-- Each column represents a feature (e.g. gene); each row represents a data point (e.g. cell).
-- All input matrix files listed in the tree file should have the same number of features/columns (they can have different number of rows or data points).
-
-#### Parameters
+## Documentation
+This is the SCOTCH/NMTF implementation in C++
 
 
-| Position | Parameter | Description | Default Value/Behavior | 
-| :---    | :---        | :--- | :--- |
-| 1     | input tree file      | The tree file, which contains file locations to individual task matrices (paths are relative to location of run_tmf executable location). See above for tree file format | N/A | 
-| 2     | number of features   | Number of features/columns in each task matrix, which has to be be the same across all tasks. | N/A | 
-| 3     | k     | The lower dimension of the factors (i.e. number of clusters) | N/A | 
-| optional | -o \<output_file_prefix\>    | Ouput file path. Note: will NOT create a directory if the specified directory does not exist. | Output files will save to current directory. | 
-| optional | -a \<alpha\>  | Strenth of tree regularization, higher value enfoces higher similarity to parent node. |  10 | 
-| optional | -l \<lambda\>  | Strength of the sparsity constraint. Larger value results in sparser leaf node (i.e. task-specific) factor V. | 0, i.e. no sparsity regularization. |  
-| optional | -s  | Run in slient mode, nothing printed to stdout. | Error, total run time, max memory usage printed to stdout. | 
-| optional | -r \<random_state\> | Random state/seed used for rNNDSVD initialization. | 1010|
-| optional | -t \<tol\> | Determines convergence and the termination of iterations. If \<tol\> = 10, the algorithm will keep iterating until the absolute difference between the previous iteration's error and current iteration's error is less than 10.| 1 |
-| optional | -m \<max_iter\> | If \<max_iter\> = 200, the algorithm will terminate at 200 iterations if it has not coverged based on the tolerance (tol) parameter by then. | 300 |
+## Description 
+A C++ implementation of the regularized non-negative matrix tri-factorization algorithm. 
 
-#### Output files
-- `leaf`\_U.txt and `leaf`\_V.txt for each leaf node; `leaf` will bereplaced with the node's alias.
-- `node`\_V.txt for each internal node and the root node; `node` will be replaced with the node's alias.
+## Methods/Outputs
+The goal of this function is to take a matrix X of dimension n x m and factor it into three matrices, U in n x k1, S in k1 x k2, and V in k2 x m, such that the difference between X and the product U x S x V is minimized. Formally this is resolved by minimizing the objective || X - U S V ||2^2. The program outputs the three product matrices. 
 
-#### Difference from TGIF
-- No graph regularization
-- Initialization via joint NMF
-- Sparsity regularization for leaf node (i.e. task-specific) factor V.
+### Orthoganilty regularization
+The model allows for the addition of orthoganility regularization on the U and/or the V matrix. The idea of this regularization is to generate unique factors. It is particularly useful in resolving unique clusters from the lower dimensional embedding. It is recommend to put orthoganility reg. on either or both factors such that they are unique. If both are selected, then the S matrix will have more overlap. 
 
-#### TODO
-- [x] Update documentation
-- [ ] Upload derivation for sparisty regularization on task-specific Vs
-- [x] Test sparsity regularization
-- [x] Reduce matrix copying after initialization via joint NMF
+### Sparsity regularization. 
+This works simililarly to the ortho regularization. In this case, the number of non-zero entries in each factor in penalized. It again will result in more unique factors although. 
+
+## Arguments 
+
+| Argument | is Required? | Description | additional Info                               |
+| ---------|--------------|-------------|-----------------------------------------------|
+| --in_file: | required | The file containing the tab delimited X matrix if full form. | example: test/A.txt                           |
+| --k1:		   | required |	The lower dimension of the U matrix.                         | example 2                                     | 
+| --k2:		   | required | The lower dimension of the V matrix.                         | example 3                                     |
+| --lU:		   | optional	|	strength of ortho reg on U.                                  | example 0.1 (value should be between [0, 1])  |
+| --lV:		   | optional	|	strength of ortho reg on V.                                  | example 0.1 (values should be between [0, 1]) |
+| --aU:		   | optional	|	strength of sparsity reg on U. | example 0.1 (values should be between [0, 1]) |
+| --aV:		   | optional	|	strength of sparsity reg on V. | example 0.1 (values should be between [0, 1]) |
+| --verbose	 | optional |		if included, time and convergence info will be printed to terminal |
+| --seed		 | optional	|	random seed used to initialize U, S, and V. | Default 1010                                  |
+| --max_iter | optional	|	number of epochs to attempt prior to output.| Default 100                                   |
+| --term_tol | optional	|	the relative change in error prior to completion. | Default 1e-5                                  |	
+| --out_dir	 | optional	|	output directory to print U, S, and V.  |
+| --cpu		   | optional	|	if included, defuaults to using the CPU | 
+
+## Running the example 
+**./run_example.sh 1**.  Defaults to the CPU 
+**./run_example.sh 0**.  Runs on GPU if available. 
