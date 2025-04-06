@@ -29,6 +29,7 @@ NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, doub
         lambdaV = 0;
 	test=0;
 	algotype=0;
+	legacy=false;
 }
 
 NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, list<double> *slope){
@@ -47,6 +48,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
         alphaV = 0;
         lambdaV = 0;
 	test=0;
+	legacy=false;
 }
 
 NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, list<double> *slope, double aU, double lU){
@@ -65,6 +67,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
 	alphaV = 0;
 	lambdaV = 0;
 	test=0;
+	legacy=false;
 }
 
 NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err, list<double> *slope, double aU, double lU, double aV, double lV){
@@ -83,6 +86,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
         alphaV = aV;
         lambdaV = lV;
 	test=0;
+	legacy=false;
 }
 
 
@@ -98,44 +102,8 @@ int NMTF::update_kth_block_of_U(int k){
 	//R_i = X - sum_{ h ne k} u_h q_h^T Rank one matrices not including u_k 
 	//Update equation: R * q_i /  || q_i ||_2^2. 
 	gsl_blas_dgemv(CblasNoTrans, 1/q_norm, R, &q_k.vector, 0, &u_k.vector);
-	int n = R->size1;
-	
-	//Orthogonality Term  Regularization term: lambda_u * sum_{j ne k}  u_j  / ||q_i||^2 
-	if (lambdaU > 0) {
-                gsl_vector* u_others = gsl_vector_calloc(n);
-                for (int j = 0; j < u_components; j++) {
-                        if (j != k) {
-                                gsl_vector_view u_j = gsl_matrix_row(U, j);
-                                gsl_vector_add(u_others, &u_j.vector);
-                        }
-                }
-                gsl_vector_scale(u_others, lambdaU/q_norm);
-                //subtract regularization term. 
-		gsl_vector_sub(&u_k.vector, u_others);
-                gsl_vector_free(u_others);
-        }
-	
-	//Sparsity Term Regularization term : alpha_u 1_n / || q_i||^2 where 1_n is the ones vector of length n. 
-	if (alphaU > 0 ){
-		gsl_vector* alpha = gsl_vector_calloc(n);
-		gsl_vector_set_all(alpha, alphaU/q_norm);
-		//Subtract regulatizatin term 
-		gsl_vector_sub(&u_k.vector, alpha);
-		gsl_vector_free(alpha);
-	}
-	
-	//Inforce Positivity
-	for (int i = 0; i < n; i++) {
-		double *val = &((&u_k.vector)->data[i]);
-		if (*val < 0) {
-			*val = 0;
-		}
-	}
-	
-	//insure non-zero vector if all elements are zero. 	
-	if (gsl_vector_isnull(&u_k.vector)) {
-		gsl_vector_set_all(&u_k.vector, 1/double(n));
-	}
+	enforce_min_val(&u_k.vector);
+	unit_normalize(&u_k.vector);
 	return 0;
 }
 
@@ -147,42 +115,8 @@ int NMTF::update_kth_block_of_V(int k){
 	// R_j = X - sum_{ h ne k} p_h v_h^T Rank one matrices not included v_k 
 	// Update equation: R * p_i/ || p_i || ^2
 	gsl_blas_dgemv(CblasTrans, 1/p_norm, R, &p_k.vector, 0, &v_k.vector);
-	int m = R->size2;
- 		
-	//Orthogonality Term. Regularization term: lambda_v * sum_{j ne k} v_j / || p_i ||^2
-	if (lambdaV > 0) {
-		gsl_vector* v_others = gsl_vector_calloc(m);
-		for (int j = 0; j < v_components; j++) {
-			if (j != k) {
-				gsl_vector_view v_j = gsl_matrix_row(V, j);
-				gsl_vector_add(v_others, &v_j.vector);
-			}
-		}
-		gsl_vector_scale(v_others, lambdaV/p_norm);
-		gsl_vector_sub(&v_k.vector, v_others);
-		gsl_vector_free(v_others);
-	}
-	
-	//Sparsity Term. Regularization termL alpha_v * 1_n / ||p_i||^2
-	if (alphaV > 0 ){
-		gsl_vector* alpha = gsl_vector_calloc(m);
-		gsl_vector_set_all(alpha, alphaV/p_norm);
-		gsl_vector_sub(&v_k.vector, alpha);	
-		gsl_vector_free(alpha);
-	}
-
-	//Inforce positivity
-	for (int i = 0; i < m; i++) {
-		double *val = &((&v_k.vector)->data[i]);
-		if (*val < 0) {
-			*val = 0;
-		}
-	}
-
-	//insure non-zero vector if all elements are zero. 	
-	if (gsl_vector_isnull(&v_k.vector)) {
-		gsl_vector_set_all(&v_k.vector, 1/double(m));
-	}
+	enforce_min_val(&v_k.vector);
+	unit_normalize(&v_k.vector);
 	return 0;
 }
 
@@ -255,58 +189,145 @@ int NMTF::update_kth_block_of_S(int k){
 	return 0;	 	 
 }
 
+int NMTF::apply_orthog_u(int k, double q_norm)
+{
+	if (lambdaU > 0) {
+		gsl_vector_view u_k= gsl_matrix_row(U, k);
+		gsl_vector* u_others = gsl_vector_calloc(n);
+		for (int j = 0; j < u_components; j++) {
+			if (j != k) {
+				gsl_vector_view u_j = gsl_matrix_row(U, j);
+				gsl_vector_add(u_others, &u_j.vector);
+			}
+		}
+		gsl_vector_scale(u_others, lambdaU/q_norm);
+		//subtract regularization term.
+		gsl_vector_sub(&u_k.vector, u_others);
+		gsl_vector_free(u_others);
 
-int NMTF::update() {
+		enforce_min_val(&u_k.vector);
+		unit_normalize(&u_k.vector);
+	}
+	return 0;
+}
+
+int NMTF::apply_orthog_v(int k, double p_norm)
+{
+	if (lambdaV > 0) {
+		gsl_vector_view v_k= gsl_matrix_row(V, k);
+		gsl_vector* v_others = gsl_vector_calloc(m);
+		for (int j = 0; j < v_components; j++) {
+			if (j != k) {
+				gsl_vector_view v_j = gsl_matrix_row(V, j);
+				gsl_vector_add(v_others, &v_j.vector);
+			}
+		}
+		gsl_vector_scale(v_others, lambdaV/p_norm);
+		gsl_vector_sub(&v_k.vector, v_others);
+		gsl_vector_free(v_others);
+
+		enforce_min_val(&v_k.vector);
+		unit_normalize(&v_k.vector);
+	}
+}
+
+int NMTF::apply_sparsity_u(int k, double q_norm)
+{
+	if (alphaU > 0 ){
+		gsl_vector_view u_k= gsl_matrix_row(U, k);
+		enforce_min_val(&u_k.vector, alphaU/q_norm);
+		unit_normalize(&u_k.vector);
+	}
+	return 0;
+}
+
+
+int NMTF::apply_sparsity_v(int k, double p_norm)
+{
+	if (alphaV > 0 ){
+		gsl_vector_view v_k= gsl_matrix_row(V, k);
+		enforce_min_val(&v_k.vector, alphaV/p_norm);
+		gsl_vector_free(&v_k.vector);
+	}
+	return 0;
+}
+
+int NMTF::update_U()
+{
+	double q_norm;
 	for (int k1 = 0; k1 < u_components; k1++) {
 		gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
 		gsl_vector_view q_k1 = gsl_matrix_row(Q, k1);
+		q_norm = pow(gsl_blas_dnrm2(&q_k1.vector), 2); //note we want the squared value
 		//Make R_i see equation for u_k update above for datail
 		gsl_blas_dger( 1, &u_k1.vector, &q_k1.vector, R);
 		// update U_k
 		update_kth_block_of_U(k1);
-		//Make R. Simply add the new rank 1 matrix. 
+		apply_orthog_u(k1, q_norm);
+		apply_sparsity_v(k1, q_norm);
+		//Make R. Simply add the new rank 1 matrix.
 		gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
 	}
-	// compute P = US	
-	update_P();
+
+}
+
+
+int NMTF::update_V()
+{
+	double p_norm;
 	for (int k2 = 0; k2 < v_components; k2++){
-                gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
-                gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
+		gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+		gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
+		p_norm = pow(gsl_blas_dnrm2(&p_k2.vector), 2);  // note we want the norm squared
 		//Make R_j see equation for v_k update above for detail.
 		gsl_blas_dger( 1, &p_k2.vector, &v_k2.vector, R);
 		//Udpate V_k
 		update_kth_block_of_V(k2);
+		apply_orthog_v(k2, p_norm);
+		apply_sparsity_v(k2, p_norm);
 		//Make R
-                gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
+		gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
 	}
-	// compute Q = SV^T
-	update_Q();
-	//update S matrix 
+}
+
+int NMTF::update_S()
+{
 	for (int k1 = 0; k1 < u_components; k1++){
 		for(int k2 = 0; k2 < v_components; k2++){
 			double* s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
 			gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
 			gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
-			//Make R_i,j See equation for s_ij update above for details 
+			//Make R_i,j See equation for s_ij update above for details
 			gsl_blas_dger( *s_k1_k2, &u_k1.vector, &v_k2.vector, R);
 			//Update S_ij
-			update_ith_jth_of_S(k1, k2); 	
+			update_ith_jth_of_S(k1, k2);
 			//Make R
 			gsl_blas_dger(-*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
 		}
-		//Check that all rows are nonzero. 
+		//Check that all rows are nonzero.
 		gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
-	 	if (gsl_vector_isnull(&s_k1.vector)) {
-                	gsl_vector_set_all(&s_k1.vector, 1/double(u_components));
-        	}
+		if (gsl_vector_isnull(&s_k1.vector)) {
+			gsl_vector_set_all(&s_k1.vector, 1/double(u_components));
+		}
 	}
 	for (int k2 = 0; k2 < v_components; k2++){
 		//Check that all columns are nonzero
-		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);	
+		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
 		if (gsl_vector_isnull(&s_k2.vector)) {
-                        gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
-        	}
+			gsl_vector_set_all(&s_k2.vector, 1/double(v_components));
+		}
 	}
+}
+
+int NMTF::update() {
+	update_U();
+	update_P();
+
+	update_V();
+	update_Q();
+
+	update_S_unit();
+
 	//Normalize and scale u v and S. 
 	normalize_and_scale_u();
 	normalize_and_scale_v();
@@ -663,25 +684,39 @@ int NMTF::fit(gsl_matrix* inputmat, gsl_matrix* W, gsl_matrix* H, gsl_matrix* D,
 	for (int n_iter =0; n_iter < max_iter; n_iter++){
 		//Update U S V
         	gettimeofday(&begTime, NULL);
-		if(algotype==0)
+		if (legacy)
 		{
-			update();
+			if(algotype==0)
+			{
+				update();
+			}
+			else if(algotype==1)
+			{
+				update_ijblock();
+			}
+			else if(algotype==2){
+				update_viaSBlock();
+			}
+			else{
+				cout<<"Unknown algo type" << endl;
+				exit(0);
+			}
 		}
-		else if(algotype==1)
+		else
 		{
-			update_ijblock(); 
-		}
-		else if(algotype==2){
-			update_viaSBlock();
-		}
-		else{
-			cout<<"Unknown algo type" << endl;
-			exit(0);
+			update_unit();
 		}
         	gettimeofday(&endTime, NULL);
 		bt=begTime.tv_sec;
 		et=endTime.tv_sec;
-		cout <<"algotype"<<algotype<<" iter:" << n_iter <<" time: "<<  et-bt << "secs " << endl;
+		if (legacy)
+		{
+			cout <<"algotype "<<algotype<<" iter:" << n_iter <<" time: "<<  et-bt << "secs " << endl;
+		}else
+		{
+			cout <<"algotype unit iter:" << n_iter <<" time: "<<  et-bt << "secs " << endl;
+		}
+
 		string n_iter_string = to_string(n_iter + 1);
 		write_test_files(n_iter_string);
 		//Compute R and find error.
@@ -963,7 +998,7 @@ int NMTF::subtract_factors(gsl_matrix* A, gsl_vector* b){
 	for(int i=0; i<nFactors; i++){
 		gsl_vector_view a_k = gsl_matrix_row(A, i);
 		gsl_vector_sub(&a_k.vector, b);
-		//inforce non_negativity constraint.
+		//inforce non_negativity constraint.∂
 		for(int j=0; j<nTerms; j++){
 			double *val=&((&a_k.vector)->data[j]);
 			if(*val < 0 ) {
@@ -973,6 +1008,246 @@ int NMTF::subtract_factors(gsl_matrix* A, gsl_vector* b){
 	}	
 	
 }
+
+int NMTF::update_kth_block_of_U_unit(int k)
+{
+	// Update U_k  by taking the product R * q_k1.
+	gsl_vector_view u_k = gsl_matrix_row(U, k);
+	gsl_vector_view q_k = gsl_matrix_row(Q, k);
+	gsl_blas_dgemv(CblasNoTrans, 1, R, &q_k.vector, 0, &u_k.vector);
+
+	//Then enforce non-negativity and unit norm.
+	enforce_min_val(&u_k.vector);
+	unit_normalize(&u_k.vector);
+	return 0;
+}
+
+int NMTF::update_kth_block_of_V_unit(int k)
+{
+	//Update v_k by taking the product RT p
+	gsl_vector_view p_k = gsl_matrix_row(P, k);
+	gsl_vector_view v_k = gsl_matrix_row(V, k);
+	gsl_blas_dgemv(CblasTrans, 1, R, &p_k.vector, 0, &v_k.vector);
+
+	//Then enforce non-negativity and unit norm.
+	enforce_min_val(&v_k.vector);
+	unit_normalize(&v_k.vector);
+	return 0;
+}
+
+
+int NMTF::apply_orthog_u_unit(int k)
+{
+	if (lambdaU > 0) {
+		gsl_vector_view u_k = gsl_matrix_row(U, k);
+		gsl_vector* u_others = gsl_vector_calloc(n);
+		for (int j = 0; j < u_components; j++) {
+			if (j != k) {
+				gsl_vector_view u_j = gsl_matrix_row(U, j);
+				gsl_vector_add(u_others, &u_j.vector);
+			}
+		}
+		unit_normalize(u_others);
+		gsl_vector_scale(u_others, lambdaU);
+		//subtract regularization term.
+		gsl_vector_sub(&u_k.vector, u_others);
+		gsl_vector_free(u_others);
+
+		//Then enforce non-negativity and unit norm
+		enforce_min_val(&u_k.vector);
+		unit_normalize(&u_k.vector);
+	}
+	return 0;
+}
+
+
+int NMTF::apply_sparsity_u_unit(int k )
+{
+	if (alphaU > 0)
+	{
+		gsl_vector_view u_k = gsl_matrix_row(U, k);
+		enforce_min_val(&u_k.vector, alphaU);
+		unit_normalize(&u_k.vector);
+	}
+	return 0;
+}
+
+
+int NMTF::apply_orthog_v_unit(int k)
+{
+	if (lambdaV > 0)
+	{
+		gsl_vector_view v_k = gsl_matrix_row(V, k);
+		gsl_vector* v_others = gsl_vector_calloc(m);
+		for (int j = 0; j < v_components; j++) {
+			if (j != k) {
+				gsl_vector_view v_j = gsl_matrix_row(V, j);
+				gsl_vector_add(v_others, &v_j.vector);
+			}
+		}
+		unit_normalize(v_others);
+		gsl_vector_scale(v_others, lambdaV);
+		//subtract regularization term.
+		gsl_vector_sub(&v_k.vector, v_others);
+		gsl_vector_free(v_others);
+
+		//Then enforce non-negativity and unit norm
+		enforce_min_val(&v_k.vector);
+		unit_normalize(&v_k.vector);
+	}
+	return 0;
+}
+
+int NMTF::apply_sparsity_v_unit(int k)
+{
+	if (alphaV > 0)
+	{
+		gsl_vector_view v_k = gsl_matrix_row(V, k);
+		enforce_min_val(&v_k.vector, alphaV);
+		unit_normalize(&v_k.vector);
+	}
+	return 0;
+}
+
+
+int NMTF::enforce_min_val(gsl_vector* x, double alpha = 0)
+{
+	double *val;
+	for (int i = 0; i < x->size; i++)
+	{
+		val = gsl_vector_ptr(x, i);
+		if (*val < alpha)
+		{
+			*val = 0;
+		}
+	}
+	return 0;
+}
+int NMTF::unit_normalize(gsl_vector* x)
+{
+	double norm = gsl_blas_dnrm2(x);
+	if (norm > 0)
+	{
+		gsl_vector_scale(x, 1/norm);
+	}else
+	//If norm is zero set all values to uniform val and normalize
+	{
+		gsl_vector_set_all(x, 1);
+		norm = gsl_blas_dnrm2(x);
+		gsl_vector_scale(x, 1/norm);
+	}
+	return 0;
+}
+
+
+int NMTF::update_U_unit()
+{
+	for (int k1= 0; k1 < u_components; k1++)
+	{
+		gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+		gsl_vector_view q_k1 = gsl_matrix_row(Q, k1);
+		//Make R_i see equation for u_k update above for datail
+		gsl_blas_dger( 1, &u_k1.vector, &q_k1.vector, R);
+		update_kth_block_of_U_unit(k1);
+		apply_orthog_u_unit(k1);
+		apply_sparsity_u_unit(k1);
+		gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
+	}
+}
+
+
+int NMTF::update_V_unit()
+{
+	for (int k2 = 0; k2 < v_components; k2++)
+	{
+		gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+		gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
+
+		gsl_blas_dger( 1, &p_k2.vector, &v_k2.vector, R);
+		update_kth_block_of_V_unit(k2);
+		apply_orthog_v_unit(k2);
+		apply_sparsity_v_unit(k2);
+		gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
+	}
+}
+
+int NMTF::update_unit()
+{
+	update_U_unit();
+	update_P();
+
+	update_V_unit();
+	update_Q();
+
+	update_S_unit();
+	update_P();
+	update_Q();
+	return 0;
+}
+
+int NMTF::update_ith_jth_of_S_unit(int k1, int k2){
+	//update the ith and jth element at a time. Picked this method because no computation of inverse needed.
+	// R_ij = X - sum_{c ne i} sum_{d ne j} u_c s_{c,d} v_d^T \\rank 1 matrix corresponding to the the c and d vector.
+	//Update equation s_i,j = u_i^T R_ij v_j / (|| u_i||_2^2 ||v_j||_2^2)
+	gsl_vector* temp = gsl_vector_alloc(n);
+	double* s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
+	gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+	gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+
+	gsl_blas_dgemv(CblasNoTrans, 1, R, &v_k2.vector, 0, temp);
+	gsl_blas_ddot(&u_k1.vector, temp, s_k1_k2);
+	if (*s_k1_k2 < 0) {
+		*s_k1_k2 = 0;
+	}
+
+	gsl_vector_free(temp);
+	return 0;
+}
+
+
+int NMTF::update_S_unit()
+{
+	for (int k1 = 0; k1 < u_components; k1++)
+	{
+		for (int k2 = 0; k2 < v_components; k2++)
+		{
+			double *s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
+			gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
+			gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
+			//Make R_i,j See equation for s_ij update above for details
+			gsl_blas_dger(*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
+			//Update S_ij
+			update_ith_jth_of_S(k1, k2);
+			//Make R
+			gsl_blas_dger(-*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
+		}
+		//Check that all rows are nonzero.
+		gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
+		if (gsl_vector_isnull(&s_k1.vector))
+		{
+			gsl_vector_set_all(&s_k1.vector, 1);
+			unit_normalize(&s_k1.vector);
+		}
+	}
+
+	for (int k2 = 0; k2 < v_components; k2++){
+		//Check that all columns are nonzero
+		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
+		if (gsl_vector_isnull(&s_k2.vector)) {
+			gsl_vector_set_all(&s_k2.vector, 1);
+			unit_normalize(&s_k2.vector);
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
 
 int NMTF::reset_k1_k2(int new_k1, int new_k2){
 	//Used to change k1 and k2 for an NMTF object. Used in iterative learning
@@ -986,3 +1261,11 @@ NMTF::setAlgotype(int val){
 	algotype=val;
 	return 0;
 }
+
+int
+NMTF::setLegacy(bool leg)
+{
+	legacy = leg;
+	return 0;
+}
+

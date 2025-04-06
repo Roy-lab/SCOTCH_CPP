@@ -24,6 +24,7 @@ class NMTF {
 		int compute_R();
 		int reset_k1_k2(int, int);
 		int setAlgotype(int);
+		int setLegacy(bool);
 		int u_components;
 		int v_components;
 		int n;
@@ -51,6 +52,9 @@ class NMTF {
 		gsl_matrix* Q;
 		
 		int algotype;
+		bool legacy;
+
+		//Legacy update equations
 		int update_P();
 		int update_Q();
 		int update_kth_block_of_U(int);
@@ -59,8 +63,42 @@ class NMTF {
 		int update_kth_block_of_S(int);
 		int update_US();
 		int update_SV();
+
+		int apply_orthog_u(int, double);
+		int apply_sparsity_u(int, double);
+		int apply_orthog_v(int, double);
+		int apply_sparsity_v(int, double);
+
+		int update_U();
+		int update_V();
+		int update_S();
+
 		int update();
+
+
+
+		//Updates with unit regularization
+		int update_kth_block_of_U_unit(int);
+		int update_kth_block_of_V_unit(int);
+		int update_ith_jth_of_S_unit(int, int);
+		int apply_orthog_u_unit(int);
+		int apply_sparsity_u_unit(int);
+		int apply_orthog_v_unit(int);
+		int apply_sparsity_v_unit(int);
+
+		int update_U_unit();
+		int update_V_unit();
+		int update_S_unit();
+		int update_unit();
+
+
+		int enforce_min_val(gsl_vector *, double); //We add in alpha here just to save computations. Defualts to zero.
+ 		int unit_normalize(gsl_vector *);
+
+
+
 		int update_viaSBlock();
+
 		//SR editted
 		int update_ijblock();
 		int normalize_and_scale_u();
