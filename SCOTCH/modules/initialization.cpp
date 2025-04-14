@@ -18,7 +18,7 @@
 extern "C" {
 	#include "random_svd/low_rank_svd_algorithms_gsl.h"
 }
-
+/*
 int init::nndsvd(gsl_matrix* A, gsl_matrix* W, gsl_matrix* H, int seed) {
 	int m = A->size1;
 	int n = A->size2;
@@ -120,6 +120,7 @@ int init::nndsvd(gsl_matrix* A, gsl_matrix* W, gsl_matrix* H, int seed) {
 
 	return 0;
 }
+*/
 
 int init::random(gsl_matrix* W, gsl_matrix* H, int seed) {
 	int k = W->size1;
@@ -191,11 +192,24 @@ int init::random(gsl_matrix* W, gsl_matrix* H, gsl_matrix* D, int seed) {
 int init::random(gsl_matrix* X, gsl_rng* ri){
 	int d1 = X->size1;
 	int d2 = X->size2;
-	
+	double val;
 	for (int i=0; i < d1; i++){
 		for (int j=0; j < d2; j++){
-			double *val = &(X->data[i * X->tda + j]);
-			* val = gsl_rng_uniform(ri);
+			val = gsl_rng_uniform(ri);
+			gsl_matrix_set(X, i, j, val);
+		}
+	}
+	return 0;
+}
+
+int init::random(gsl_matrix* X, const gsl_rng* ri){
+	int d1 = X->size1;
+	int d2 = X->size2;
+	double val;
+	for (int i=0; i < d1; i++){
+		for (int j=0; j < d2; j++){
+			val = gsl_rng_uniform(ri);
+			gsl_matrix_set(X, i, j, val);
 		}
 	}
 	return 0;

@@ -1,5 +1,5 @@
 #include "matrix_vector_functions_gsl.h"
-
+#include <gsl/gsl_linalg.h>
 
 /* computes the approximate low rank SVD of rank k of matrix M using BBt version */
 void randomized_low_rank_svd1(gsl_matrix *M, int k, gsl_matrix **U, gsl_matrix **S, gsl_matrix **V);

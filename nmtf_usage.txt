@@ -1,64 +1,95 @@
 Usage:
-./run_nmtf <matrix file> <number of samples/rows> <number of features/columns> <k1> <k2> <optional arguments>
+./run_nmtf [options]
 
-Example:
-./run_nmtf input/toy/A.txt 95 120 2 2 -o output/        ### For single K1 and K2
-./run_nmtf input/toy/A.txt 95 120 2 2 -o output/ -i input/k1_k2_file.txt    ###For multiple k1 and k2. 
+Options:
+  -X, --data <matrix file>
+        Path to the tab-delimited matrix file. Each column represents
+        a feature, and each row represents a data point. This is a
+        required argument.
 
-Input matrix file format:
-- Tab-delimited "dense" matrix text files.
-- Each column represents a feature (e.g. gene); each row represents 
-	a data point (e.g. cell).
+  -n, --n_samples <number>
+        Number of samples/rows in the matrix file. This is a required
+        argument.
 
-Output files:
-- [prefix]U.txt, [prefix]S.txt, and [prefix]V.txt for the factors U, S, and V.
-- Note: U output is in k1 x n, S output is k1 x k2, and V in k2 x m.
+  -f, --n_features <number>
+        Number of features/columns in the matrix file. This is a
+        required argument.
 
-Optional arguments:
--o <output file prefix>
-	If <ouput file prefix> = output then output files will be 
-	saved to output directory (note: will NOT create a directory 
-	if it does not exist). By default output will be saved to 
-	current directory.
--a <alphaV>
-	If <alphaV> = 200, sets the alpha (strength of sparsity constraint) 
-	on the V matrix to 200. Default is alpha = 0, no sparsity constraint.
-	= 0. 
+  -k   --k1 <number>
+        Rank of the first factorization matrix (U). This is a required
+        argument.
 
--b <alphaU>
-	if <alphaU> = 200, sets the alpha (strength of sparsity constraint) 
-	on the U matrix to 200. Default is alpha = 0, no sparsity constraint.
+  -K  --k2 <number>
+        Rank of the second factorization matrix (V). This is a required
+        argument.
 
--l <lambdaV>
-	If <lambdaV> = 200, sets lambda (strength of orthogonality constraint)
-	to 200. Default is lambda = 0, no orthogonality constraint. 
+  -o, --output <prefix>
+        Specifies the prefix for the output files. By default, output
+        files will be stored in the current directory. Will NOT create
+        directories automatically.
 
-k <lambdaU>
-	If <lamdaU> = 200, sets lambda (strength of orthogonality constrain
-	to 200. Default is lambda = 0, no orthogonality constraint.
--s
-	Run in slient mode, nothing printed to stdout. By default, 
-	error/objective value at each iteration is printed, and the
-	total run time and max RAM usage is printed at the end.
--r <random state>
-	Random state/seed used for rNNDSVD (rNNDSVD not yet implemented) initialization. 
-	Default random state = 1010. (Should implement a time dependent random 
-	initilization for different random initilization)
--t <tol>
-	If <tol> = 10, the algorithm will keep iterating until the
-	absolute difference between the previous iteration's error
-	and current iteration's error is less than 10. By default,
-	tol = 1.
+  -a, --alphaU <value>
+        Regularization parameter for the sparsity constraint on the
+        U matrix. Default is 0, meaning no sparsity constraint.
 
--i <iterative learning file> 
-	A path to file that contains additional k1 and k2 to learn. 
-	If k1 or k2 is larger than any other prevous completed version in the outfolder, 
-	the iterative learning will intiate. 
-	This learns additional factors then learns k1 and k2. 
+  -A, --alphaV <value>
+        Regularization parameter for the sparsity constraint on the
+        V matrix. Default is 0, meaning no sparsity constraint.
 
--m <max iter>
-	If <max iter> = 200, the algorithm will terminate at 200
-	iterations if it has not coverged based on the tolerance (tol)
-	parameter by then. By default, max iter = 300.
--h
-	Print this manual to screen. 
+  -l  --lambdaU <value>
+          Regularization parameter for the orthogonality constraint on
+          the U matrix. Default is 0, meaning no orthogonality
+          constraint.
+
+  -L, --lambdaV <value>
+        Regularization parameter for the orthogonality constraint on
+        the V matrix. Default is 0, meaning no orthogonality
+        constraint.
+
+  -r, --seed <value>
+        Seed for the random state used during initialization.
+        Default value is 1101. For reproducibility, set a specific seed.
+
+  -t, --tol <value>
+        Convergence tolerance. The algorithm will terminate when the
+        absolute error difference between iterations is below this
+        threshold. Default is 1e-5.
+
+  -i, --mult_K <file>
+        Path to a file containing additional k1 and k2 values for
+        iterative learning. If k1 or k2 is greater than previous
+        iterations, the algorithm will continue learning additional
+        factors, using previous factors for updates.
+
+  -m, --max_iter <value>
+        Maximum number of iterations for convergence. If the specified
+        tolerance is not reached within this limit, the algorithm will
+        terminate. Default is 100.
+
+  -s, --silent
+        Enable silent mode. When enabled, the algorithm will not
+        print progress or results to stdout. By default, error values
+        will be printed at each iteration, along with the total runtime
+        and maximum RAM usage.
+
+  -h, --help
+        Print this manual and exit.
+
+Examples:
+
+1. Basic run for single k1 and k2:
+./run_nmtf --output out/ --data input/toy/A.txt --n_samples 95 --n_features 120 --k1 3 --k2 3
+
+2. Using iterative learning:
+./run_nmtf --output out/ --data input/toy/A.txt --n_samples 95 --n_features 120 --mult_k test_mult_k.txt \
+--lambda_u 0.1 --lambda_v 0.1 --alpha_u  0.1 --alpha_v 0.1
+
+3. Regularization and silent mode:
+./run_nmtf --output out/ --data input/toy/A.txt --n_samples 95 --n_features 120 --k1 3 --k2 3 --silent \
+--lambda_u 0.01 --lambda_v 0.01 --alpha_u 0.01 --alpha_v 0.01
+
+Output Files:
+The algorithm generates three output files, saved to the specified location with the given prefix:
+1. `<prefix>U.txt`: The U factor matrix (k1 x n).
+2. `<prefix>S.txt`: The S factor matrix (k1 x k2).
+3. `<prefix>V.txt`: The V factor matrix (k2 x m).

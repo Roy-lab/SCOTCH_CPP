@@ -5,6 +5,7 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_linalg.h>
 
 
 #define min(x,y) (((x) < (y)) ? (x) : (y))

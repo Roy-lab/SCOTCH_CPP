@@ -10,5 +10,6 @@ namespace init{
 	int random(gsl_matrix*, gsl_matrix*, int);
 	int random(gsl_matrix*, int);
 	int random(gsl_matrix*, gsl_rng*);
+	int random(gsl_matrix*, const gsl_rng*);
 };
 #endif

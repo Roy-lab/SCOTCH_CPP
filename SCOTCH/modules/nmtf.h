@@ -1,4 +1,5 @@
 #include <gsl/gsl_matrix.h>
+
 #include <list>
 #ifndef _nmtf_
 #define _nmtf_
@@ -9,6 +10,7 @@ enum init_method { nndsvd_init, random_init };
 class NMTF
 {
 	public:
+	NMTF();
 	NMTF(int, init_method, int, int, bool, double, list<double> *, list<double> *);
 
 	NMTF(int, int, init_method, int, int, bool, double, list<double> *, list<double> *);
@@ -19,6 +21,19 @@ class NMTF
 	     double);
 
 	~NMTF();
+
+	int
+	set_NMTF_params(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol,
+	                list<double> *err, list<double> *slope, double aU, double lU, double aV, double lV);
+
+	int
+	set_NMTF_params_python(int k1, int k2, int maxIter, int seed, bool verb, double termTol,
+			list<double> *err, list<double> *slope, double aU, double lU, double aV, double lV);
+
+	int
+	set_NMTF_params(init_method initMethod, int maxIter, int seed, bool verb, double termTol,
+			list<double> *err, list<double> *slope, double aU, double lU, double aV, double lV);
+
 
 	int
 	initialize_matrices(gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *,
@@ -35,15 +50,15 @@ class NMTF
 
 	int
 	increase_k1_fixed_k2(int, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *,
-	                     gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_rng *);
+	                     gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, const gsl_rng *);
 
 	int
 	increase_k2_fixed_k1(int, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *,
-	                     gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_rng *);
+	                     gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, const gsl_rng *);
 
 	int
 	increase_k1_k2(int, int, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *,
-	               gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_rng *);
+	               gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, gsl_matrix *, const gsl_rng *);
 
 	int
 	compute_R();
@@ -52,11 +67,25 @@ class NMTF
 	reset_k1_k2(int, int);
 
 	int
+	set_size(int, int);
+
+	int
 	setAlgotype(int);
 
 	int
 	setLegacy(bool);
 
+	int
+	get_algotype();
+
+
+	gsl_matrix *X;
+	gsl_matrix *U;
+	gsl_matrix *V;
+	gsl_matrix *S;
+	gsl_matrix *R;
+	gsl_matrix *P;
+	gsl_matrix *Q;
 	int u_components;
 	int v_components;
 	int n;
@@ -75,14 +104,6 @@ class NMTF
 	list<double> *reconstruction_slope_;
 
 	private:
-	gsl_matrix *X;
-	gsl_matrix *U;
-	gsl_matrix *V;
-	gsl_matrix *S;
-	gsl_matrix *R;
-	gsl_matrix *P;
-	gsl_matrix *Q;
-
 	int algotype;
 	bool legacy;
 
@@ -170,9 +191,13 @@ class NMTF
 	int
 	update_unit();
 
+	int
+	enforce_min_val(gsl_vector *);
 
 	int
 	enforce_min_val(gsl_vector *, double); //We add in alpha here just to save computations. Defualts to zero.
+
+
 	int
 	unit_normalize(gsl_vector *);
 

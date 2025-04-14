@@ -12,6 +12,27 @@
 #include "utils.h"
 #include "io.h"
 
+NMTF::NMTF()
+{
+	// Initialization where k1 and k2 are equal. This works correctly but isn't used in run_nmtf.
+	u_components = 0;
+	v_components = 0;
+	init = random_init;
+	max_iter = 100;
+	random_state = 1101;
+	verbose = true;
+	tol = 1e-5;
+	reconstruction_err_ = nullptr;
+	reconstruction_slope_ = nullptr;
+	alphaU = 0;
+	lambdaU = 0;
+	alphaV = 0;
+	lambdaV = 0;
+	test = 0;
+	algotype = 0;
+	legacy = false;
+}
+
 NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err,
            list<double> *slope)
 {
@@ -100,6 +121,55 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
 
 NMTF::~NMTF()
 {
+}
+
+
+int
+NMTF::set_NMTF_params(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol,
+	list<double>* err, list<double>* slope, double aU, double lU, double aV, double lV)
+{
+	u_components = k1;
+	v_components = k2;
+	init = initMethod;
+	max_iter = maxIter;
+	random_state = seed;
+	verbose = verb;
+	tol = termTol;
+	reconstruction_err_ = err;
+	reconstruction_slope_ = slope;
+	alphaU = aU;
+	lambdaU = lU;
+	alphaV = aV;
+	lambdaV = lV;
+	test = 0;
+	legacy = false;
+}
+
+int
+NMTF::set_NMTF_params_python(int k1, int k2, int maxIter, int seed, bool verb, double termTol,
+	list<double>* err, list<double>* slope, double aU, double lU, double aV, double lV)
+{
+	set_NMTF_params(k1, k2, random_init, maxIter, seed, verb, termTol, err, slope, aU, lU, aV, lV);
+}
+
+int
+NMTF::set_NMTF_params(init_method initMethod, int maxIter, int seed, bool verb, double termTol,
+	list<double>* err, list<double>* slope, double aU, double lU, double aV, double lV)
+{
+
+	init = initMethod;
+	max_iter = maxIter;
+	random_state = seed;
+	verbose = verb;
+	tol = termTol;
+	reconstruction_err_ = err;
+	reconstruction_slope_ = slope;
+	alphaU = aU;
+	lambdaU = lU;
+	alphaV = aV;
+	lambdaV = lV;
+	test = 0;
+	legacy = false;
 }
 
 int
@@ -257,6 +327,7 @@ NMTF::apply_orthog_v(int k, double p_norm)
 		enforce_min_val(&v_k.vector);
 		unit_normalize(&v_k.vector);
 	}
+	return 0;
 }
 
 int
@@ -279,7 +350,7 @@ NMTF::apply_sparsity_v(int k, double p_norm)
 	{
 		gsl_vector_view v_k = gsl_matrix_row(V, k);
 		enforce_min_val(&v_k.vector, alphaV / p_norm);
-		gsl_vector_free(&v_k.vector);
+		unit_normalize(&v_k.vector);
 	}
 	return 0;
 }
@@ -298,10 +369,11 @@ NMTF::update_U()
 		// update U_k
 		update_kth_block_of_U(k1);
 		apply_orthog_u(k1, q_norm);
-		apply_sparsity_v(k1, q_norm);
+		apply_sparsity_u(k1, q_norm);
 		//Make R. Simply add the new rank 1 matrix.
 		gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
 	}
+	return 0;
 }
 
 
@@ -323,6 +395,7 @@ NMTF::update_V()
 		//Make R
 		gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
 	}
+	return 0;
 }
 
 int
@@ -358,6 +431,7 @@ NMTF::update_S()
 			gsl_vector_set_all(&s_k2.vector, 1 / double(v_components));
 		}
 	}
+	return 0;
 }
 
 int
@@ -369,7 +443,7 @@ NMTF::update()
 	update_V();
 	update_Q();
 
-	update_S_unit();
+	update_S();
 
 	//Normalize and scale u v and S.
 	normalize_and_scale_u();
@@ -508,90 +582,47 @@ NMTF::update_viaSBlock()
 int
 NMTF::update_US()
 {
-	//Same as above but ignores the V component. Used in iterated learning when k2_new = k2_old
-	for (int k1 = 0; k1 < u_components; k1++)
+	if (legacy)
 	{
-		gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
-		gsl_vector_view q_k1 = gsl_matrix_row(Q, k1);
-		gsl_blas_dger(1, &u_k1.vector, &q_k1.vector, R);
-		update_kth_block_of_U(k1);
-		gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
-	}
-	update_P();
-	for (int k1 = 0; k1 < u_components; k1++)
+		update_U();
+		update_P();
+		update_S();
+		normalize_and_scale_u();
+		normalize_and_scale_v();
+		update_P();
+		update_Q();
+	}else
 	{
-		for (int k2 = 0; k2 < v_components; k2++)
-		{
-			double *s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
-			gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
-			gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
-			gsl_blas_dger(*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
-			update_ith_jth_of_S(k1, k2);
-			gsl_blas_dger(-*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
-		}
-		gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
-		if (gsl_vector_isnull(&s_k1.vector))
-		{
-			gsl_vector_set_all(&s_k1.vector, 1 / double(v_components));
-		}
+		update_U_unit();
+		update_P();
+		update_S_unit();
+		update_P();
+		update_Q();
 	}
-	for (int k2 = 0; k2 < v_components; k2++)
-	{
-		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
-		if (gsl_vector_isnull(&s_k2.vector))
-		{
-			gsl_vector_set_all(&s_k2.vector, 1 / double(u_components));
-		}
-	}
-	normalize_and_scale_u();
-	normalize_and_scale_v();
-	update_P();
-	update_Q();
 	return 0;
+
 }
 
 int
 NMTF::update_SV()
 {
-	//Same as above but ignorest he U component. Used in iterated learning when k1_new = k1_old
-	for (int k2 = 0; k2 < v_components; k2++)
+	if (legacy)
 	{
-		gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
-		gsl_vector_view p_k2 = gsl_matrix_row(P, k2);
-		gsl_blas_dger(1, &p_k2.vector, &v_k2.vector, R);
-		update_kth_block_of_V(k2);
-		gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
-	}
-	update_Q();
-	for (int k1 = 0; k1 < u_components; k1++)
+		update_U();
+		update_P();
+		update_S();
+		normalize_and_scale_u();
+		normalize_and_scale_v();
+		update_P();
+		update_Q();
+	} else
 	{
-		for (int k2 = 0; k2 < v_components; k2++)
-		{
-			double *s_k1_k2 = gsl_matrix_ptr(S, k1, k2);
-			gsl_vector_view u_k1 = gsl_matrix_row(U, k1);
-			gsl_vector_view v_k2 = gsl_matrix_row(V, k2);
-			gsl_blas_dger(*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
-			update_ith_jth_of_S(k1, k2);
-			gsl_blas_dger(-*s_k1_k2, &u_k1.vector, &v_k2.vector, R);
-		}
-		gsl_vector_view s_k1 = gsl_matrix_row(S, k1);
-		if (gsl_vector_isnull(&s_k1.vector))
-		{
-			gsl_vector_set_all(&s_k1.vector, 1 / double(u_components));
-		}
+		update_U_unit();
+		update_P();
+		update_S_unit();
+		update_P();
+		update_Q();
 	}
-	for (int k2 = 0; k2 < v_components; k2++)
-	{
-		gsl_vector_view s_k2 = gsl_matrix_column(S, k2);
-		if (gsl_vector_isnull(&s_k2.vector))
-		{
-			gsl_vector_set_all(&s_k2.vector, 1 / double(v_components));
-		}
-	}
-	normalize_and_scale_u();
-	normalize_and_scale_v();
-	update_P();
-	update_Q();
 	return 0;
 }
 
@@ -972,7 +1003,7 @@ NMTF::fit_SV(gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D, 
 int
 NMTF::increase_k1_fixed_k2(int k1, gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D, gsl_matrix *O,
                            gsl_matrix *L, gsl_matrix *Ris, gsl_matrix *U_new, gsl_matrix *S_new, gsl_matrix *P_new,
-                           gsl_matrix *Q_new, gsl_rng *ri)
+                           gsl_matrix *Q_new, const gsl_rng *ri)
 {
 	//Iterated learning when k1 increases but k2 is fixed. Insure R is initialized correctly
 	initialize_matrices(inputmat, W, H, D, O, L, Ris);
@@ -1029,7 +1060,7 @@ NMTF::increase_k1_fixed_k2(int k1, gsl_matrix *inputmat, gsl_matrix *W, gsl_matr
 int
 NMTF::increase_k2_fixed_k1(int k2, gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D, gsl_matrix *O,
                            gsl_matrix *L, gsl_matrix *Ris, gsl_matrix *V_new, gsl_matrix *S_new, gsl_matrix *P_new,
-                           gsl_matrix *Q_new, gsl_rng *ri)
+                           gsl_matrix *Q_new, const gsl_rng *ri)
 {
 	//Iterated learning when k2 increases and k1 is fixed. Same as above.
 	initialize_matrices(inputmat, W, H, D, O, L, Ris);
@@ -1078,7 +1109,7 @@ NMTF::increase_k2_fixed_k1(int k2, gsl_matrix *inputmat, gsl_matrix *W, gsl_matr
 int
 NMTF::increase_k1_k2(int k1, int k2, gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D,
                      gsl_matrix *O, gsl_matrix *L, gsl_matrix *Ris, gsl_matrix *U_new, gsl_matrix *V_new,
-                     gsl_matrix *S_new, gsl_matrix *P_new, gsl_matrix *Q_new, gsl_rng *ri)
+                     gsl_matrix *S_new, gsl_matrix *P_new, gsl_matrix *Q_new, const gsl_rng *ri)
 {
 	//Used when both k1 and k2 incerases
 	initialize_matrices(inputmat, W, H, D, O, L, Ris);
@@ -1158,6 +1189,7 @@ NMTF::subtract_factors(gsl_matrix *A, gsl_vector *b)
 			}
 		}
 	}
+	return 0;
 }
 
 int
@@ -1271,9 +1303,24 @@ NMTF::apply_sparsity_v_unit(int k)
 	return 0;
 }
 
+int
+NMTF::enforce_min_val(gsl_vector * x)
+{
+	double *val;
+	for (int i = 0; i < x->size; i++)
+	{
+		val = gsl_vector_ptr(x, i);
+		if (*val < 0)
+		{
+			*val = 0;
+		}
+	}
+	return 0;
+}
+
 
 int
-NMTF::enforce_min_val(gsl_vector *x, double alpha = 0)
+NMTF::enforce_min_val(gsl_vector *x, double alpha)
 {
 	double *val;
 	for (int i = 0; i < x->size; i++)
@@ -1319,6 +1366,7 @@ NMTF::update_U_unit()
 		apply_sparsity_u_unit(k1);
 		gsl_blas_dger(-1, &u_k1.vector, &q_k1.vector, R);
 	}
+	return 0;
 }
 
 
@@ -1336,6 +1384,7 @@ NMTF::update_V_unit()
 		apply_sparsity_v_unit(k2);
 		gsl_blas_dger(-1, &p_k2.vector, &v_k2.vector, R);
 	}
+	return 0;
 }
 
 int
@@ -1412,6 +1461,7 @@ NMTF::update_S_unit()
 			unit_normalize(&s_k2.vector);
 		}
 	}
+	return 0;
 }
 
 
@@ -1423,6 +1473,15 @@ NMTF::reset_k1_k2(int new_k1, int new_k2)
 	v_components = new_k2;
 	return 0;
 }
+
+int
+NMTF::set_size(int a, int b)
+{
+	n=a;
+	m=b;
+	return 0;
+}
+
 
 int
 NMTF::setAlgotype(int val)
@@ -1437,3 +1496,11 @@ NMTF::setLegacy(bool leg)
 	legacy = leg;
 	return 0;
 }
+
+
+
+
+
+
+
+
