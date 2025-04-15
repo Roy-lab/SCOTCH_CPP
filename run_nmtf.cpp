@@ -12,9 +12,9 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
-#include "SCOTCH/modules/io.h"
-#include "SCOTCH/modules/initialization.h"
-#include "SCOTCH/modules/nmtf.h"
+#include "SCOTCH_CPP/modules/io.h"
+#include "SCOTCH_CPP/modules/initialization.h"
+#include "SCOTCH_CPP/modules/nmtf.h"
 
 
 
