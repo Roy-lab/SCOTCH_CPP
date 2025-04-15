@@ -17,10 +17,10 @@ NMF = SCOTCH/modules/initialization.cpp SCOTCH/modules/nmtf.cpp SCOTCH/modules/u
 all: clean run_nmtf
 
 matf:
-	$(CC) -c -o SCOTCH/modules/random_svd/matrix_funcs.o modules/random_svd/matrix_vector_functions_gsl.c -I ${INCLUDE_PATH}
+	$(CC) -c -o SCOTCH/modules/random_svd/matrix_funcs.o SCOTCH/modules/random_svd/matrix_vector_functions_gsl.c -I ${INCLUDE_PATH}
 
 rsvd:
-	$(CC) -c -o SCOTCH/modules/random_svd/rsvd.o modules/random_svd/low_rank_svd_algorithms_gsl.c -I ${INCLUDE_PATH}
+	$(CC) -c -o SCOTCH/modules/random_svd/rsvd.o SCOTCH/modules/random_svd/low_rank_svd_algorithms_gsl.c -I ${INCLUDE_PATH}
 
 run_nmtf:
 	$(XX) run_nmtf.cpp $(NMF) SCOTCH/modules/random_svd/*.o -o run_nmtf $(CFLAGS) -L ${LIBRARY_PATH} ${GSLFLAGS} -I ${INCLUDE_PATH}

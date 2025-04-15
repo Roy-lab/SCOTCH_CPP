@@ -9,7 +9,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
-#include "modules/nmtf.cpp"
+#include "modules/nmtf.h"
 
 namespace py = pybind11;
 
@@ -17,6 +17,20 @@ namespace py = pybind11;
 
 class  SCOTCH_cpp_backend: public NMTF{
 	public:
+	~SCOTCH_cpp_backend()
+	{
+		free_matrices();
+	}
+	gsl_matrix* get_U() { return U; }
+	gsl_matrix* get_S() { return S; }
+	gsl_matrix* get_V() { return V; }
+	gsl_matrix* get_P() { return P; }
+	gsl_matrix* get_Q() { return Q; }
+	gsl_matrix* get_X() { return X; }
+
+
+
+
 	using NMTF::set_NMTF_params;
 	gsl_rng *
 	initialize_random_generator(int seed);
@@ -63,9 +77,6 @@ class  SCOTCH_cpp_backend: public NMTF{
 	pybind11::array_t<double> gsl_matrix_to_numpy(gsl_matrix *);
 	int add_data_to_scotch(pybind11::array_t<double> X);
 	gsl_matrix* numpy_to_gsl_matrix (pybind11::array_t<double> numpy_array);
-	private:
-
-
 };
 
 PYBIND11_MODULE(SCOTCH_cpp_backend, m) {
@@ -98,7 +109,13 @@ PYBIND11_MODULE(SCOTCH_cpp_backend, m) {
 	.def("gsl_matrix_to_numpy", &SCOTCH_cpp_backend::gsl_matrix_to_numpy, "Converts a gsl_matrix to a numpy array")
 	.def("numpy_to_gsl_matrix", &SCOTCH_cpp_backend::numpy_to_gsl_matrix, "Converts a numpy array to a gsl_matrix")
 	.def("add_data_to_scotch", &SCOTCH_cpp_backend::add_data_to_scotch,  "Adds data to the scotch matrix")
-	.def("fit", &SCOTCH_cpp_backend::fit, "Performs the NMTF factorization on a matrix");
+	.def("fit", &SCOTCH_cpp_backend::fit, "Performs the NMTF factorization on a matrix")
+	.def("get_U", &SCOTCH_cpp_backend::get_U, "Gets pointer to U matrix")
+	.def("get_V", &SCOTCH_cpp_backend::get_V, "Gets pointer to V matrix")
+	.def("get_S", &SCOTCH_cpp_backend::get_S, "Gets pointer to S matrix")
+	.def("get_P", &SCOTCH_cpp_backend::get_P, "Gets pointer to P matrix")
+	.def("get_Q", &SCOTCH_cpp_backend::get_Q, "Gets pointer to Q matrix")
+	.def("get_X", &SCOTCH_cpp_backend::get_X, "Gets pointer to X matrix");
 }
 
 

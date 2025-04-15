@@ -2,7 +2,12 @@
 // Created by Halberg, Spencer on 4/12/25.
 //
 
+#include <iostream>
+#include <gsl/gsl_rng.h>
+#include "modules/initialization.h"
 #include "SCOTCH_cpp_backend.h"
+#include "modules/io.h"
+
 typedef vector<pair<int, int>> k_vec_t;
 
 
@@ -113,7 +118,7 @@ int SCOTCH_cpp_backend::processRun(int k1, int k2, const gsl_rng* rng) {
 int
 SCOTCH_cpp_backend::increaseRun(const gsl_rng *rng, int new_k1, int new_k2)
 {
-	//Add handels so we don't accentently replace with uninitialized pointers
+	//Add handles so we don't accentently replace with uninitialized pointers
 	gsl_matrix *U_new = U;
 	gsl_matrix *V_new = V;
 	gsl_matrix *S_new = S;
@@ -212,14 +217,14 @@ int SCOTCH_cpp_backend::fit()
 	list<double> *slope = new list<double>;
 
 	//Usage file
-	string usage = string("nmtf_usage.txt");
+	//string usage = string("nmtf_usage.txt");
 
 
 	// ******************************** PARSE ARGS ******************************************
 	// Example validation
 	if (X == nullptr) {
 		std::cerr << "Error: Missing matrix file. Add data to SCOTCH\n";
-		io::print_usage(usage);
+		//io::print_usage(usage);
 		return 1;  // Exit with an error
 	}
 
@@ -227,14 +232,14 @@ int SCOTCH_cpp_backend::fit()
 	{
 		if (k_file.empty()) {
 			std::cerr << "Error: Missing factor. Please run \n";
-			io::print_usage(usage);
+			//io::print_usage(usage);
 			return 1;  // Exit with an error
 		}
 	}
 
 	if (n<=0|| m<=0) {
 		std::cerr << "Error: Missing matrix sizes. Please provide --n_samples or --n_features.\n";
-		io::print_usage(usage);
+		//io::print_usage(usage);
 		return 1;  // Exit with an error
 	}
 

@@ -4,7 +4,6 @@ from sympy.codegen import aug_assign
 
 
 from scipy.sparse import issparse
-import torch
 import pandas as pd
 import anndata
 import os
@@ -12,14 +11,17 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
 import numpy as np
+import torch ## Temporary until I fix some of the plotting functions
 
-from . import SCOTCH_cpp_backend
-
-
+from . import DataLoader
+import SCOTCH_cpp_backend
 import pyEnrichAnalyzer
 
 
-class SCOTCH(SCOTCH_cpp_backend):
+
+
+
+class SCOTCH(SCOTCH_cpp_backend.SCOTCH_cpp_backend):
     """
 SCOTCH Class
 ============
@@ -95,11 +97,12 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
                  init_style="random", save_clust=False, draw_intermediate_graph=False, save_intermediate=False,
                  track_objective=False, kill_factors=False, device="cpu", out_path='.'):
 
-        super().__init__(verbose, max_iter, seed, term_tol, max_l_u, max_l_v, max_a_u, max_a_v, k1, k2, var_lambda,
-                         var_alpha, shape_param, mid_epoch_param, init_style, save_clust, draw_intermediate_graph,
-                         save_intermediate, track_objective, kill_factors, device, out_path)
+        super().__init__(k1 = k1, k2 = k2,
+                         max_iter = max_iter, seed = seed,
+                         lU = max_l_u,  lV = max_l_v,  aU = max_a_v, aV = max_a_v)
 
         self.DataLoader = DataLoader(verbose)
+
 
     def add_data_from_file(self, file):
         """
@@ -119,19 +122,17 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
 
         shape = None
         _, file_extension = os.path.splitext(file)
-        if file_extension == '.pt':
-            self.X, shape = self.DataLoader.from_pt(file)
-        elif file_extension == '.txt':
-            self.X, shape = self.DataLoader.from_text(file)
+        #if file_extension == '.pt':
+        #    self.X, shape = self.DataLoader.from_pt(file)
+        if file_extension == '.txt':
+            X, shape = self.DataLoader.from_text(file)
+            self.add_data_to_scotch(X)
         elif file_extension == '.h5ad':
             adata = self.DataLoader.from_h5ad(file)
             self.add_data_from_adata(adata)
         else:
-            raise ValueError("Unsupported file type. Select .pt or .txt or .h5ad")
-        if shape is not None:
-            self.num_u = shape[0]
-            self.num_v = shape[1]
-        print("Data loaded successfully. Shape: ", self.num_u, self.num_v)
+            raise ValueError("Unsupported file type. Select .txt or .h5ad")
+        print("Data loaded successfully.")
         return None
 
     def add_data_from_adata(self, adata):
@@ -148,15 +149,11 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
         X = adata.X
         if issparse(X):
             X_coo = X.tocoo()
-            values = torch.tensor(X_coo.data)
-            indices = torch.tensor(np.vstack((X_coo.row, X_coo.col)))
-            X_tensor = torch.sparse_coo_tensor(indices, values, X_coo.shape)
-            X_tensor = X_tensor.to_dense()
+            X_dense = np.zeros(X_coo.shape)
+            X_dense[X_coo.row, X_coo.col] = X_coo.data
         else:
-            X_tensor = torch.tensor(X)
-        self.X = X_tensor
-        self.num_u = self.X.shape[0]
-        self.num_v = self.X.shape[1]
+            X_dense = X ## This doesnt copy memory so it is okay.
+        self.add_data_to_scotch(X_dense)
         return None
 
     def add_scotch_embeddings_to_adata(self, adata, prefix=""):
@@ -169,6 +166,7 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
         :param adata: The AnnData object to which SCOTCH embeddings will be added.
         :type adata: anndata.AnnData
         """
+
         if not isinstance(adata, anndata.AnnData):
             raise TypeError("adata must be an AnnData object")
 
@@ -177,15 +175,24 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
         if len(prefix) > 0 and prefix[-1] != '_':
             prefix = prefix + '_'
 
-        adata.obs[prefix + 'cell_clusters'] = pd.Categorical(self.U_assign.detach().numpy())
-        adata.var[prefix + "gene_clusters"] = pd.Categorical(self.V_assign.t().detach().numpy())
-        adata.obsm[prefix + 'cell_embedding'] = self.U.detach().numpy()
-        adata.varm[prefix + 'gene_embedding'] = self.V.t().detach().numpy()
-        adata.uns[prefix + 'S_matrix'] = self.S.detach().numpy()
-        adata.obsm[prefix + 'P_embedding'] = self.P.detach().numpy()
-        adata.varm[prefix + 'Q_embedding'] = self.Q.t().detach().numpy()
-        adata.uns[prefix + 'reconstruction_error'] = self.reconstruction_error.detach().numpy()
-        adata.uns[prefix + 'error'] = self.error.detach().numpy()
+        U = self.gsl_matrix_to_numpy(self.get_U())
+        V = self.gsl_matrix_to_numpy(self.get_V())
+        S = self.gsl_matrix_to_numpy(self.get_S())
+        P = self.gsl_matrix_to_numpy(self.get_P())
+        Q = self.gsl_matrix_to_numpy(self.get_Q())
+
+        U_assign = assign_to_clusters(U)
+        V_assign = assign_to_clusters(V)
+
+        adata.obs[prefix + 'cell_clusters'] = pd.Categorical(U_assign)
+        adata.var[prefix + "gene_clusters"] = pd.Categorical(V_assign)
+        adata.obsm[prefix + 'cell_embedding'] = U
+        adata.varm[prefix + 'gene_embedding'] = V
+        adata.uns[prefix + 'S_matrix'] = S
+        adata.obsm[prefix + 'P_embedding'] = P
+        adata.varm[prefix + 'Q_embedding'] = Q
+        #adata.uns[prefix + 'reconstruction_error'] = self.reconstruction_error.detach().numpy()
+        #adata.uns[prefix + 'error'] = self.error.detach().numpy()
         return adata
 
     def make_adata_from_scotch(self, prefix=""):
@@ -206,8 +213,8 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
 
         if len(prefix) > 0 and prefix[-1] != '_':
             prefix = prefix + '_'
-        X = self.X
-        adata = anndata.AnnData(X.numpy())
+        X = self.gsl_matrix_to_numpy(self.get_X())
+        adata = anndata.AnnData(X)
         adata = self.add_scotch_embeddings_to_adata(adata, prefix)
         return adata
 
@@ -354,17 +361,17 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
             prefix = prefix + '_'
 
 
-        EA = pyEnrichAnalyzer.Framework()
-        enrichment = EA.runEnrichAnalyzer(
-            adata.var.to_dict(orient='index'),
-            gene_cluster_id,
-            adata.var_names.to_list(),
-            go_regnet_file,
-            fdr,
-            test_type)
-        df = pd.DataFrame(enrichment)
-        df.rename({'SubGraphName': 'gene cluster'}, axis=1, inplace=True)
-        adata.uns[prefix + 'enrichment'] = df
+        #EA = pyEnrichAnalyzer.Framework()
+        #enrichment = EA.runEnrichAnalyzer(
+        #    adata.var.to_dict(orient='index'),
+        #    gene_cluster_id,
+        #    adata.var_names.to_list(),
+        #    go_regnet_file,
+        #    fdr,
+        #    test_type)
+        #df = pd.DataFrame(enrichment)
+        #df.rename({'SubGraphName': 'gene cluster'}, axis=1, inplace=True)
+        #adata.uns[prefix + 'enrichment'] = df
 
     def visualize_enrichment_bubbleplots(self, adata, enrich_object_id,
                                          gene_cluster_id='gene cluster',
@@ -1325,14 +1332,14 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
             V_factor_id = prefix + V_factor_id
             S_matrix_id = prefix + S_matrix_id
 
-        U = torch.tensor(adata.obsm[U_factor_id])
-        V = torch.tensor(adata.varm[V_factor_id]).t()
-        S = torch.tensor(adata.uns[S_matrix_id])
+        U = adata.obsm[U_factor_id]
+        V = adata.varm[V_factor_id]
+        S = adata.uns[S_matrix_id]
 
         fig = plt.figure(figsize=(16, 6))
         grids = gridspec.GridSpec(2, 3, wspace=0.1, width_ratios=(0.2, 0.4, 0.4), height_ratios=(0.3, 0.7))
 
-        U_viz = U.detach().numpy()
+        U_viz = U.clone()
         U_viz = (U_viz - U_viz.min()) / (U_viz.max() - U_viz.min())
         ax1 = fig.add_subplot(grids[1, 0])
         ax1.imshow(U_viz, aspect="auto", cmap=cmap, interpolation=interp,
@@ -1342,21 +1349,21 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
 
         # Visualize S matrix
         ax2 = fig.add_subplot(grids[0, 0])
-        ax2.imshow(S.t().detach().numpy(), aspect="auto", cmap=cmap, interpolation=interp)
+        ax2.imshow(S.T, aspect="auto", cmap=cmap, interpolation=interp)
         ax2.set_axis_off()
         # ax2.set_title("S Matrix")
 
         # Visualize V matrix
-        V_viz = V.detach().numpy()
+        V_viz = V.clone()
         V_viz = (V_viz - V_viz.min()) / (V_viz.max() - V_viz.min())
         ax3 = fig.add_subplot(grids[0, 1])
-        ax3.imshow(V_viz, aspect="auto", cmap=cmap, interpolation=interp,
+        ax3.imshow(V_viz.T, aspect="auto", cmap=cmap, interpolation=interp,
                    vmin=0, vmax=max_v)
         ax3.set_axis_off()
         # ax3.set_title("V Matrix")
 
         # Visualize X matrix
-        X_est_viz = (U @ S @ V).detach().numpy()
+        X_est_viz = U @ S @  V.T
         X_est_viz = (X_est_viz - X_est_viz.min())/(X_est_viz.max() - X_est_viz.min())
         ax4 = fig.add_subplot(grids[1, 1])
         ax4.imshow(X_est_viz, aspect="auto", cmap=cmap,
@@ -1364,7 +1371,7 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
         # ax4.set_title("X Matrix")
         ax4.set_axis_off()
 
-        X_viz = adata.X.toarray()
+        X_viz = self.gsl_matrix_to_numpy(self.get_X())
         X_viz = (X_viz - X_viz.min()) / (X_viz.max() - X_viz.min())
         ax5 = fig.add_subplot(grids[1, 2])
         ax5.imshow(X_viz, aspect="auto", cmap=cmap, interpolation=interp,
@@ -1628,3 +1635,6 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
         plt.close(fig)
         return fig
 
+def assign_to_clusters(arr, axis=1):
+    clusters = np.argmax(arr, axis=axis)
+    return clusters
