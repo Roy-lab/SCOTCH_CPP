@@ -59,13 +59,34 @@ int initialize_factors(int k1, int k2, int nSamples, int nFeatures) {
 //Frees all matrices except X and R
 int free_factors()
 {
-	gsl_matrix_free(U);
-	gsl_matrix_free(V);
-	gsl_matrix_free(S);
-	gsl_matrix_free(P);
-	gsl_matrix_free(Q);
+	if (U != NULL) {
+		gsl_matrix_free(U);
+		U = NULL; // Optional: Set to NULL after freeing
+	}
+
+	if (V != NULL) {
+		gsl_matrix_free(V);
+		V = NULL; // Optional: Set to NULL after freeing
+	}
+
+	if (S != NULL) {
+		gsl_matrix_free(S);
+		S = NULL; // Optional: Set to NULL after freeing
+	}
+
+	if (P != NULL) {
+		gsl_matrix_free(P);
+		P = NULL; // Optional: Set to NULL after freeing
+	}
+
+	if (Q != NULL) {
+		gsl_matrix_free(Q);
+		Q = NULL; // Optional: Set to NULL after freeing
+	}
+
 	return 0;
 }
+
 
 int free_factors_fixed_k1()
 {

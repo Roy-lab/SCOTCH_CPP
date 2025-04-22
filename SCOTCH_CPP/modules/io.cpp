@@ -95,6 +95,12 @@ int io::read_dense_matrix(const string inputFile, gsl_matrix* X) {
 		rowid++;
 	}
 	input.close();
+
+	// Free the memory after you're done
+	if (buff != NULL) {
+		delete[] buff;  // Free memory before function ends
+	}
+
 	return 0;
 }
 
