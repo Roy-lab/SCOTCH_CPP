@@ -252,6 +252,7 @@ increaseRun(const std::string& outputPrefix, const gsl_rng *rng, int new_k1, int
 	list<double>* err= nmtf.reconstruction_err_;
 	list<double>* slope = nmtf.reconstruction_slope_;
 	io::write_nmtf_output(U, V, S, R, err, slope, out_dir);
+	return 0;
 }
 
 

@@ -73,6 +73,7 @@ int utils::matrix_abs(gsl_matrix* M, gsl_matrix* abs_M){
 			abs_M -> data[i * abs_M->tda +j] = fabs( abs_M->data[i * abs_M->tda +j]);
 		}
 	}
+	return 0;
 }
 
 int utils::pos_matrix_elements(gsl_matrix* M, gsl_matrix* pos_M){
@@ -84,6 +85,7 @@ int utils::pos_matrix_elements(gsl_matrix* M, gsl_matrix* pos_M){
                 	}
 		}
         }
+	return 0;
 }
 
 int utils::neg_matrix_elements(gsl_matrix* M, gsl_matrix* neg_M){
@@ -95,5 +97,6 @@ int utils::neg_matrix_elements(gsl_matrix* M, gsl_matrix* neg_M){
                         }
                 }
         }
+	return 0;
 }
 

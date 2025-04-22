@@ -143,6 +143,7 @@ NMTF::set_NMTF_params(int k1, int k2, init_method initMethod, int maxIter, int s
 	lambdaV = lV;
 	test = 0;
 	legacy = false;
+	return 0;
 }
 
 int
@@ -150,6 +151,7 @@ NMTF::set_NMTF_params_python(int k1, int k2, int maxIter, int seed, bool verb, d
 	list<double>* err, list<double>* slope, double aU, double lU, double aV, double lV)
 {
 	set_NMTF_params(k1, k2, random_init, maxIter, seed, verb, termTol, err, slope, aU, lU, aV, lV);
+	return 0;
 }
 
 int
@@ -170,6 +172,7 @@ NMTF::set_NMTF_params(init_method initMethod, int maxIter, int seed, bool verb, 
 	lambdaV = lV;
 	test = 0;
 	legacy = false;
+	return 0;
 }
 
 int
