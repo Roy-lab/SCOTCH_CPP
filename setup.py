@@ -24,7 +24,7 @@ cpp_backend_files = ['SCOTCH_CPP/SCOTCH_cpp_backend.cpp',
 
 cpp_backend_ext = [
     Extension(
-        name="SCOTCH_cpp_backend",  # Importable as SCOTCH_CPP.SCOTCH_cpp_backend
+        name="SCOTCH_CPP.SCOTCH_cpp_backend",  # Importable as SCOTCH_CPP.SCOTCH_cpp_backend
         sources=cpp_backend_files,  # Only include the main source file for the extension
         include_dirs=[
             'SCOTCH_CPP/modules',  # Ensure this points to the correct directory
@@ -41,7 +41,7 @@ cpp_backend_ext = [
 enrich_analyzer_sources = glob.glob('SCOTCH_CPP/PyEnrichAnalyzer/*.C')
 pyEnrichAnalyzer_ext = [
     Pybind11Extension(
-        'pyEnrichAnalyzer',  # name of output module
+        'SCOTCH_CPP.pyEnrichAnalyzer',  # name of output module
         enrich_analyzer_sources,
         include_dirs=[  # locations of your includes here
             '/usr/local/include',

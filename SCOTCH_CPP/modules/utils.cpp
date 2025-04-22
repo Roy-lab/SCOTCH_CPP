@@ -37,7 +37,7 @@ double utils::get_sum_vector_one_norm(gsl_matrix* X) {
 
 
 int utils::get_inverse(gsl_matrix* A) {
-	gsl_linalg_cholesky_decomp1(A);
+	gsl_linalg_cholesky_decomp(A);
 	gsl_linalg_cholesky_invert(A);
 	return 0;
 }

@@ -1,6 +1,6 @@
 #CHANGE PATHS AS NEEDED:
-GSL=/mnt/dv/wid/projects2/Roy-common/programs/thirdparty/gsl-2.6
-#GSL=/opt/homebrew/opt/gsl
+#GSL=/mnt/dv/wid/projects2/Roy-common/programs/thirdparty/gsl-2.6
+GSL=/opt/homebrew/opt/gsl
 INCLUDE_PATH=${GSL}/include
 LIBRARY_PATH=${GSL}/lib
 #compiler: gcc for C programs, g++ for C++ programs

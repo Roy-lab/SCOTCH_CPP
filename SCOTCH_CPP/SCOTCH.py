@@ -14,14 +14,14 @@ import numpy as np
 import torch ## Temporary until I fix some of the plotting functions
 
 from . import DataLoader
-import SCOTCH_cpp_backend
-import pyEnrichAnalyzer
+from SCOTCH_CPP import SCOTCH_cpp_backend as backend
+from SCOTCH_CPP import  pyEnrichAnalyzer as pyEA
 
 
 
 
 
-class SCOTCH(SCOTCH_cpp_backend.SCOTCH_cpp_backend):
+class SCOTCH(backend.SCOTCH_cpp_backend):
     """
 SCOTCH Class
 ============
@@ -97,9 +97,7 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
                  init_style="random", save_clust=False, draw_intermediate_graph=False, save_intermediate=False,
                  track_objective=False, kill_factors=False, device="cpu", out_path='.'):
 
-        super().__init__(k1 = k1, k2 = k2,
-                         max_iter = max_iter, seed = seed,
-                         lU = max_l_u,  lV = max_l_v,  aU = max_a_v, aV = max_a_v)
+        super().__init__(k1, k2, max_iter, seed, max_l_u, max_l_v, max_a_u, max_a_v)
 
         self.DataLoader = DataLoader(verbose)
 
@@ -361,17 +359,17 @@ The `SCOTCH` class extends from the `NMTF` class. It has a specific `__init__` m
             prefix = prefix + '_'
 
 
-        #EA = pyEnrichAnalyzer.Framework()
-        #enrichment = EA.runEnrichAnalyzer(
-        #    adata.var.to_dict(orient='index'),
-        #    gene_cluster_id,
-        #    adata.var_names.to_list(),
-        #    go_regnet_file,
-        #    fdr,
-        #    test_type)
-        #df = pd.DataFrame(enrichment)
-        #df.rename({'SubGraphName': 'gene cluster'}, axis=1, inplace=True)
-        #adata.uns[prefix + 'enrichment'] = df
+        EA = pyEA.Framework()
+        enrichment = EA.runEnrichAnalyzer(
+            adata.var.to_dict(orient='index'),
+            gene_cluster_id,
+            adata.var_names.to_list(),
+            go_regnet_file,
+            fdr,
+            test_type)
+        df = pd.DataFrame(enrichment)
+        df.rename({'SubGraphName': 'gene cluster'}, axis=1, inplace=True)
+        adata.uns[prefix + 'enrichment'] = df
 
     def visualize_enrichment_bubbleplots(self, adata, enrich_object_id,
                                          gene_cluster_id='gene cluster',

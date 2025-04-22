@@ -96,12 +96,9 @@ PYBIND11_MODULE(SCOTCH_cpp_backend, m) {
 	 std::list<double>* slope = nullptr; // No slope list provided
 
 	 // Call set_NMTF_params to initialize NMTF parameters
-	 int status = instance->set_NMTF_params(k1, k2, defaultInitMethod, maxIter, seed, verb, termTol,
+	 instance->set_NMTF_params(k1, k2, defaultInitMethod, maxIter, seed, verb, termTol,
 						err, slope, aU, lU, aV, lV);
 
-	 if (status != 0) {
-	     throw std::runtime_error("Failed to set NMTF parameters");
-	 }
 
 	 return instance; // Return the initialized instance
 	}))

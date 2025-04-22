@@ -494,7 +494,9 @@ int main(int argc, char **argv)
 	}
 
 	free_matrices();
-
+	gsl_rng_free(rng);
+	delete err;
+	delete slope;
 	return 0;
 }
 
