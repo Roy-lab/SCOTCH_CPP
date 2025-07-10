@@ -1,3 +1,10 @@
+#!/bin/bash
+set -e
+
+export OPENBLAS_VERBOSE=1
+OPENBLAS_NUM_THREADS=4
+
+
 #export LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/mnt/dv/wid/projects2/Roy-common/programs/thirdparty/gsl-2.6/lib
 
 ## Algo type zero Should be used with legacy!!!!!
@@ -30,7 +37,4 @@ mkdir -p output/unit_lambda_alpha_0_1
 
 ./run_nmtf --output output/unit_lambda_alpha_0_1 --data input/toy/A.txt --n_samples 95 --n_features 120 --mult_k test_mult_k.txt \
 --lambda_u 0.1 --lambda_v 0.1 --alpha_u  0.1 --alpha_v 0.1
-
-
-
 
