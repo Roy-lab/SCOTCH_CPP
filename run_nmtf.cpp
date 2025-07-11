@@ -502,8 +502,13 @@ int main(int argc, char **argv)
 	X = gsl_matrix_calloc(nSamples, nFeatures);
 	R = gsl_matrix_calloc(nSamples, nFeatures);
 	string matrixFileName(matrixFile);
-	io::read_dense_matrix(matrixFileName, X);
+	int file_flag = io::read_dense_matrix(matrixFileName, X);
 
+	if (file_flag == -1)
+	{
+		cout << "Error: Could not read matrix file: " << matrixFile << endl;
+		return -1;
+	}
 
 
 
