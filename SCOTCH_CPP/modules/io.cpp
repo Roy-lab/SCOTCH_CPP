@@ -67,6 +67,13 @@ int io::read_dense_matrix(const string inputFile, gsl_matrix* X) {
 	int i, j;
 	double val;
 	int rowid=0;
+
+	if (input.fail())
+	{
+		cout << "Error opening file" << endl;
+		return -1;
+	}
+
 	while(input.good())
 	{
 	//while (input >> i >> j >> val) {
