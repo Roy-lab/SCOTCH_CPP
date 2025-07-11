@@ -149,6 +149,16 @@ int processRun(const std::string& outputPrefix, int k1, int k2, const gsl_rng* r
 	timeval endTime;
 	rusage eUsage;
 
+	//Write outputs
+	std::string out_dir = build_directory_path(outputPrefix, k1, k2);
+	mkdir(outputPrefix.c_str(), 0766);
+	mkdir(out_dir.c_str(), 0766);
+
+	if(nmtf.test)
+	{
+		nmtf.outpath = out_dir;
+	}
+
 	//Set up run params
 	nmtf.reset_k1_k2(k1, k2);
 	initialize_factors(k1, k2, nSamples, nFeatures);
@@ -158,15 +168,11 @@ int processRun(const std::string& outputPrefix, int k1, int k2, const gsl_rng* r
 	init::random(V, rng);
 	init::random(S, rng);
 
-
 	//Fit
 	gettimeofday(&factorTime, nullptr);
 	nmtf.fit(X, U, V, S, P, Q, R);
 
-	//Write outputs
-	std::string out_dir = build_directory_path(outputPrefix, k1, k2);
-	mkdir(outputPrefix.c_str(), 0766);
-	mkdir(out_dir.c_str(), 0766);
+
 		// Log memory and timing
 	gettimeofday(&endTime, nullptr);
 	getrusage(RUSAGE_SELF, &eUsage);
@@ -376,7 +382,7 @@ int main(int argc, char **argv)
 	gettimeofday(&beginTime,NULL);
 	getrusage(RUSAGE_SELF,&bUsage);
 
-	//*************** SET ALL DEFAULTS *********************************
+	//*************** SET ALL 4AULTS *********************************
 	//initialize factor and matrix size.
 	string matrixFile;
 	int k1 = -1, k2 = -1;
@@ -385,7 +391,7 @@ int main(int argc, char **argv)
 	string outputPrefix = "./", k_file, inPrefix;
 
 	//initialize_fit options
-	bool multK=false, legacy = false, verbose = true;
+	bool multK=false, legacy = false, verbose = true; bool t = false;
 
 	//initialize convergence and generative process
 	int seed = 1010, maxIter = 100, algotype=0;
@@ -427,6 +433,7 @@ int main(int argc, char **argv)
 		{"n_features", required_argument, nullptr,  'f' },
 		{"k1",         required_argument, nullptr,  'k' },
 		{"k2",         required_argument, nullptr,  'K' },
+		{"test",	no_argument,	 nullptr,	 'T'},
 		{nullptr,      0,                 nullptr,  0 } // End of list
 	};
 
@@ -438,7 +445,7 @@ int main(int argc, char **argv)
 
 	int c = 0;
 	int option_index = 0;
-	while ((c = getopt_long(argc, argv, ":o:r:sm:t:A:a:L:l:k:K:X:n:f:i:h:u:ep:", long_options, &option_index)) != -1)
+	while ((c = getopt_long(argc, argv, ":o:r:sm:t:A:a:L:l:k:K:X:n:f:i:h:u:eTp:", long_options, &option_index)) != -1)
  {
 		switch (c) {
 			case 'o': outputPrefix = optarg; break;
@@ -460,7 +467,7 @@ int main(int argc, char **argv)
 			case 'u': algotype = std::atoi(optarg); break;
 			case 'e': legacy = true; break;
 			case 'p': inPrefix = optarg; break;
-
+			case 'T': t = true; break;
 			default: io::print_usage(usage); return 0;
 		}
 	}
@@ -498,9 +505,12 @@ int main(int argc, char **argv)
 	io::read_dense_matrix(matrixFileName, X);
 
 
+
+
 	nmtf.set_NMTF_params(random_init, maxIter, seed, verbose, tol, err, slope, alphaU, lambdaU, alphaV, lambdaV);
 	nmtf.set_size(nSamples, nFeatures);
 	nmtf.setLegacy(legacy);
+	nmtf.set_test(t);
 	if (legacy)
 	{
 		nmtf.setAlgotype(algotype);
@@ -513,6 +523,11 @@ int main(int argc, char **argv)
 	else
 	{
 		processRun(outputPrefix, k1, k2, rng);
+	}
+
+	if (nmtf.test)
+	{
+		io::write_dense_matrix(outputPrefix + "/X_out.txt", nmtf.X);
 	}
 
 	free_matrices();

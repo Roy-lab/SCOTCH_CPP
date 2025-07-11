@@ -78,6 +78,9 @@ class NMTF
 	int
 	get_algotype();
 
+	int
+	set_test(bool);
+
 
 	gsl_matrix *X;
 	gsl_matrix *U;
@@ -90,7 +93,6 @@ class NMTF
 	int v_components;
 	int n;
 	int m;
-	int test;
 	double lambdaU;
 	double lambdaV;
 	double alphaU;
@@ -101,11 +103,16 @@ class NMTF
 	bool verbose;
 	double tol;
 	list<double> *reconstruction_err_;
+	list<double> *reg_err_;
 	list<double> *reconstruction_slope_;
 
+	bool test;
+
+	string outpath;
 	private:
 	int algotype;
 	bool legacy;
+
 
 	//Legacy update equations
 	int

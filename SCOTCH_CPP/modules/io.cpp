@@ -30,7 +30,10 @@ int io::write_dense_matrix(const string outputFile, gsl_matrix* X) {
 	ofs.open(outputFile.c_str());
 	for (int i = 0; i < rowNum; i++) {
 		for (int j = 0; j < colNum; j++) {
-			ofs << X->data[i * X->tda + j] << "\t";
+			ofs << X->data[i * X->tda + j];
+			if (j < colNum - 1) {
+				ofs << "\t";
+			}
 		}	
 		ofs << endl;
 	}

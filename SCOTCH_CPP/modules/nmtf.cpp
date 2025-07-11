@@ -28,9 +28,9 @@ NMTF::NMTF()
 	lambdaU = 0;
 	alphaV = 0;
 	lambdaV = 0;
-	test = 0;
 	algotype = 0;
 	legacy = false;
+	test = false;
 }
 
 NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err,
@@ -50,9 +50,9 @@ NMTF::NMTF(int k, init_method initMethod, int maxIter, int seed, bool verb, doub
 	lambdaU = 0;
 	alphaV = 0;
 	lambdaV = 0;
-	test = 0;
 	algotype = 0;
 	legacy = false;
+	test = false;
 }
 
 NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err,
@@ -72,8 +72,8 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
 	lambdaU = 0;
 	alphaV = 0;
 	lambdaV = 0;
-	test = 0;
 	legacy = false;
+	test = false;
 }
 
 NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool verb, double termTol, list<double> *err,
@@ -93,7 +93,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
 	lambdaU = lU;
 	alphaV = 0;
 	lambdaV = 0;
-	test = 0;
+	test = false;
 	legacy = false;
 }
 
@@ -114,7 +114,7 @@ NMTF::NMTF(int k1, int k2, init_method initMethod, int maxIter, int seed, bool v
 	lambdaU = lU;
 	alphaV = aV;
 	lambdaV = lV;
-	test = 0;
+	test = false;
 	legacy = false;
 }
 
@@ -141,7 +141,7 @@ NMTF::set_NMTF_params(int k1, int k2, init_method initMethod, int maxIter, int s
 	lambdaU = lU;
 	alphaV = aV;
 	lambdaV = lV;
-	test = 0;
+	test = false;
 	legacy = false;
 	return 0;
 }
@@ -170,7 +170,7 @@ NMTF::set_NMTF_params(init_method initMethod, int maxIter, int seed, bool verb, 
 	lambdaU = lU;
 	alphaV = aV;
 	lambdaV = lV;
-	test = 0;
+	test = false;
 	legacy = false;
 	return 0;
 }
@@ -577,7 +577,7 @@ NMTF::update_viaSBlock()
 	normalize_and_scale_v();
 	update_P();
 	update_Q();
-	write_test_files("");
+	//write_test_files("");
 	return 0;
 }
 
@@ -762,13 +762,12 @@ int
 NMTF::write_test_files(string s)
 {
 	//Writes all matrices.
-	stringstream ss;
-	ss << "test/";
-	io::write_dense_matrix(ss.str() + s + "U.txt", U);
-	io::write_dense_matrix(ss.str() + s + "V.txt", V);
-	io::write_dense_matrix(ss.str() + s + "S.txt", S);
-	io::write_dense_matrix(ss.str() + s + "P.txt", P);
-	io::write_dense_matrix(ss.str() + s + "Q.txt", Q);
+
+	io::write_dense_matrix(s + "U.txt", U);
+	io::write_dense_matrix(s + "V.txt", V);
+	io::write_dense_matrix(s + "S.txt", S);
+	//io::write_dense_matrix(ss.str() + s + "P.txt", P);
+	//io::write_dense_matrix(ss.str() + s + "Q.txt", Q);
 	return 0;
 }
 
@@ -801,7 +800,13 @@ NMTF::fit(gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D, gsl
           gsl_matrix *Ris)
 {
 	initialize_matrices(inputmat, W, H, D, O, L, Ris);
-	write_test_files("0");
+
+	if (test)
+	{
+		write_test_files(outpath + "/0");
+	}
+
+
 	reconstruction_err_->clear();
 	reconstruction_slope_->clear();
 	int num_converge = 0;
@@ -858,7 +863,10 @@ NMTF::fit(gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D, gsl
 		}
 
 		string n_iter_string = to_string(n_iter + 1);
-		write_test_files(n_iter_string);
+		if (test)
+		{
+			write_test_files(outpath + "/" + n_iter_string);
+		}
 		//Compute R and find error.
 		double error = calculate_objective();
 		//Find change in error
@@ -888,6 +896,8 @@ NMTF::fit(gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D, gsl
 			num_converge = 0;
 		}
 	}
+
+	io::write_dense_matrix(outpath + "/X_out.txt", X);
 	return 0;
 }
 
@@ -1499,6 +1509,14 @@ NMTF::setLegacy(bool leg)
 	legacy = leg;
 	return 0;
 }
+
+int
+NMTF::set_test(bool t)
+{
+	test= t;
+	return 0;
+}
+
 
 
 
