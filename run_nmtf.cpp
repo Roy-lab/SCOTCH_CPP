@@ -525,10 +525,12 @@ int main(int argc, char **argv)
 		processRun(outputPrefix, k1, k2, rng);
 	}
 
+	/*
 	if (nmtf.test)
 	{
 		io::write_dense_matrix(outputPrefix + "/X_out.txt", nmtf.X);
 	}
+	*/
 
 	free_matrices();
 	gsl_rng_free(rng);

@@ -803,7 +803,7 @@ NMTF::fit(gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D, gsl
 
 	if (test)
 	{
-		write_test_files(outpath + "/0");
+		write_test_files(outpath + "/0_");
 	}
 
 
@@ -865,7 +865,7 @@ NMTF::fit(gsl_matrix *inputmat, gsl_matrix *W, gsl_matrix *H, gsl_matrix *D, gsl
 		string n_iter_string = to_string(n_iter + 1);
 		if (test)
 		{
-			write_test_files(outpath + "/" + n_iter_string);
+			write_test_files(outpath + "/" + n_iter_string + '_');
 		}
 		//Compute R and find error.
 		double error = calculate_objective();
